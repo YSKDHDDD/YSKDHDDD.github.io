@@ -1,5 +1,9 @@
 /* ==========================================================================
    工牌：canvas 画带子，DOM 画卡片
+   结构是三层，各管一件事，谁都别抢别人的活：
+     .lanyard__card  尺寸 / 位置 / 物理写的 transform（每帧覆盖，别往里写别的）
+     .lanyard__flip  翻面（rotateY 180）
+     .lanyard__face  卡纸本身：底色、描边、阴影、内边距、排字
    ========================================================================== */
 
 .lanyard {
@@ -30,7 +34,69 @@
   translate: -50% 0;
   transform-origin: 50% 0;
   will-change: transform;
+  /* 卡里还有一层 rotateY，没有它翻面会被压成平的 */
+  transform-style: preserve-3d;
 
+  font-size: calc(var(--card-w) / 15);
+  cursor: grab;
+  /* 卡片上按下就进入拖拽，不能让浏览器先把手势判成滚动 */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+
+  /*
+   * 用独立的 scale 属性做「拿起来」，不碰 transform —— transform 每帧被 JS
+   * 整个覆盖，写在那儿会被冲掉。它比 transform 先应用，缩放中心仍是挂点（上沿中点），
+   * 所以卡片变大时金属扣不会跟着移位。
+   */
+  scale: 1;
+  transition: scale 180ms var(--motion-ease-soft);
+}
+
+/* 键盘用户是唯一需要这圈线的人：鼠标点击也会聚焦，但 :focus-visible 不亮 */
+.lanyard__card:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 4px;
+  border-radius: 1em;
+}
+
+/* hover 只给鼠标：触屏上 :hover 会粘住 */
+@media (hover: hover) {
+  .lanyard__card:hover {
+    scale: 1.015;
+  }
+}
+
+.lanyard__card[data-dragging='true'] {
+  cursor: grabbing;
+  scale: 1.028;
+}
+
+/* ---------- 翻面 ---------- */
+
+.lanyard__flip {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(0deg);
+  transition: transform 620ms var(--motion-ease-soft);
+}
+
+.lanyard__card[data-flipped] .lanyard__flip {
+  transform: rotateY(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lanyard__flip {
+    transition: none;
+  }
+}
+
+/* ---------- 卡纸 ---------- */
+
+.lanyard__face {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   padding: 1.5em 1.05em 1em;
@@ -45,54 +111,36 @@
     0 26px 60px -28px rgb(0 0 0 / 0.55),
     0 2px 10px -4px rgb(0 0 0 / 0.28),
     inset 0 1px 0 rgb(255 255 255 / 0.07);
-
-  font-size: calc(var(--card-w) / 15);
   overflow: hidden;
-  cursor: grab;
-  /* 卡片上按下就进入拖拽，不能让浏览器先把手势判成滚动 */
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-
-  /*
-   * 用独立的 scale 属性做「拿起来」，不碰 transform —— transform 每帧被 JS
-   * 整个覆盖，写在那儿会被冲掉。它比 transform 先应用，缩放中心仍是挂点（上沿中点），
-   * 所以卡片变大时金属扣不会跟着移位。
-   */
-  scale: 1;
-  transition:
-    scale 180ms var(--motion-ease-soft),
-    box-shadow 180ms var(--motion-ease-soft);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: box-shadow 180ms var(--motion-ease-soft);
 }
 
-/* hover 只给鼠标：触屏上 :hover 会粘住 */
-@media (hover: hover) {
-  .lanyard__card:hover {
-    scale: 1.015;
-  }
+.lanyard__face--back {
+  transform: rotateY(180deg);
 }
 
-.lanyard__card[data-dragging='true'] {
-  cursor: grabbing;
-  scale: 1.028;
-  /* 拿起来离背景更远一点，阴影跟着散开 */
+/* 拿起来离背景更远一点，阴影跟着散开 */
+.lanyard__card[data-dragging='true'] .lanyard__face {
   box-shadow:
     0 34px 72px -30px rgb(0 0 0 / 0.62),
     0 4px 14px -5px rgb(0 0 0 / 0.32),
     inset 0 1px 0 rgb(255 255 255 / 0.09);
 }
 
-/* 左侧品牌竖条 */
-.lanyard__card::before {
+/* 左侧品牌竖条：只属于信息面 */
+.lanyard__face--info::before {
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
   background: var(--brand);
+  z-index: 1;
 }
 
-/* 顶部的挂绳孔 */
-.lanyard__card::after {
+/* 顶部的挂绳孔：两个面都是同一个孔 */
+.lanyard__face::after {
   content: '';
   position: absolute;
   top: 0.62em;
@@ -103,7 +151,70 @@
   border-radius: 999px;
   background: rgb(0 0 0 / 0.42);
   box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.55);
+  z-index: 2;
 }
+
+/* ---------- 正面：只有照片 ---------- */
+
+.lanyard__face--photo {
+  padding: 0;
+  /* 照片还没解码出来时露出的底，别闪一下白 */
+  background: #0b0c10;
+  border-color: color-mix(in oklab, var(--line-strong) 55%, transparent);
+}
+
+.lanyard__face--photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* 卡是 1:1.55 的竖幅，裁掉的是两侧，人留住 */
+  object-fit: cover;
+  object-position: 50% 22%;
+  /* 拖动时别让浏览器另起一个原生图片拖影 */
+  -webkit-user-drag: none;
+}
+
+/* 照片面里的孔压在照片上，得留一道亮边才看得出是孔不是脏点 */
+.lanyard__face--photo::after {
+  background: rgb(0 0 0 / 0.55);
+  box-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 0.8),
+    0 1px 0 rgb(255 255 255 / 0.22);
+}
+
+.lanyard__scrim {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 36%;
+  background: linear-gradient(to top, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.1) 58%, transparent);
+  pointer-events: none;
+}
+
+/* 唯一一处「可交互」的明示：翻过一次就收起来，不当常驻装饰 */
+.lanyard__fliphint {
+  position: absolute;
+  left: 50%;
+  bottom: 1.3em;
+  translate: -50% 0;
+  padding: 0.45em 0.85em;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  background: rgb(10 11 14 / 0.42);
+  color: rgb(255 255 255 / 0.92);
+  font-family: var(--font-mono);
+  /* 卡面字号随卡宽缩，但提示是给眼睛读的 UI，不能跟着缩成 6px */
+  font-size: max(0.5em, 9px);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity var(--motion-base) var(--motion-ease-soft);
+}
+
+.lanyard__card[data-seen] .lanyard__fliphint {
+  opacity: 0;
+}
+
+/* ---------- 背面：信息 ---------- */
 
 .lanyard__brand {
   display: flex;
@@ -164,69 +275,6 @@
   color: var(--muted);
 }
 
-/* ---------- 有照片时的排法：照片 + 姓名条 ---------- */
-
-/*
- * 照片是这张卡的弹性块：flex:1 吃掉剩余高度，文字区永远按内容占位。
- * 反过来（照片定高、文字区溢出）一旦台词换长就会被裁掉，而卡高是随容器算的，
- * 每个断点还不一样 —— 让它自己缩，比在三个断点各调一遍数字靠谱。
- * 高度不足时缩的是照片的裁切范围，不是文字。
- */
-.lanyard__photo {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 4.5em;
-  margin: 0.85em 0 0;
-  border-radius: 3px;
-  overflow: hidden;
-  background: color-mix(in oklab, var(--fg) 10%, transparent);
-}
-
-.lanyard__photo img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  /* 裁的该是下巴以下的衣领，不是头顶 */
-  object-fit: cover;
-  object-position: 50% 16%;
-  /* 拖动时别让浏览器另起一个原生图片拖影 */
-  -webkit-user-drag: none;
-}
-
-/* 卡纸压过一层的感觉：内描边 + 底部一点点暗角，照片才不像贴上去的图 */
-.lanyard__photo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  box-shadow:
-    inset 0 0 0 1px rgb(255 255 255 / 0.12),
-    inset 0 -1.2em 1.8em -1.4em rgb(0 0 0 / 0.5);
-}
-
-.lanyard__card[data-photo] .lanyard__handle {
-  margin-top: 0.9em;
-  font-size: 1.45em;
-}
-
-.lanyard__card[data-photo] .lanyard__role {
-  margin-top: 0.3em;
-  font-size: 0.62em;
-}
-
-/* 条码收窄压短：照片已经占了视觉重心，它只需要还是条码 */
-.lanyard__card[data-photo] .lanyard__barcode {
-  width: 58%;
-  height: 1.4em;
-  margin-top: 0.8em;
-}
-
-.lanyard__card[data-photo] .lanyard__foot {
-  margin-top: 0.5em;
-  padding-top: 0.55em;
-}
-
 /* 条码那一块单独成段：上面留白是「信息区结束」，不是没排满 */
 .lanyard__barcode {
   margin-top: auto;
@@ -259,11 +307,11 @@
   color: var(--faint);
 }
 
-/* 「拖一下」是这一页唯一一次自夸，抓过一次就消失 */
+/* 「拖一下」是这一页唯一一次自夸，拖过一次就消失 */
 .lanyard__hint {
   transition: opacity var(--motion-base) var(--motion-ease-soft);
 }
 
-.lanyard__card[data-touched] .lanyard__hint {
+.lanyard__card[data-dragged] .lanyard__hint {
   opacity: 0;
 }

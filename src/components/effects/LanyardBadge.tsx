@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { cn } from '@/lib/utils'
 import { Lanyard } from './lanyardPhysics'
@@ -17,10 +17,19 @@ import './LanyardBadge.css'
  * 物理在 ./lanyardPhysics.ts 里，不碰 DOM：那边能单独在 Node 里逐帧跑，
  * 手感是靠秒数、像素、角度这些数字调出来的，不是靠看一眼截图。
  * 这个文件只做三件事 —— 画带子、写 transform、把指针事件翻成「手心」。
+ *
+ * 有照片时是双面卡：正面整幅照片，背面才是信息。翻面必须放在卡片里面的另一层
+ * （.lanyard__flip）—— 卡本身的 transform 每帧被物理整个覆盖，写在那儿会被冲掉。
  */
 
 /** 固定步长：物理按 60Hz 推进，与显示器刷新率解耦，120Hz 屏上手感不会变快 */
 const FIXED_STEP = 1 / 60
+/**
+ * 按下后位移小于这个值就算「点了一下」，用于翻面；大于就算拖拽。
+ * 只判位移不判时长：浏览器里的点击本来就没有时长上限，按住了想一会儿再松手
+ * 是常见动作，卡住 500ms 会让人觉得「有时候能翻有时候不能」。
+ */
+const TAP_SLOP = 6
 
 export interface LanyardBadgeProps {
   /** 工牌上的大字 */
@@ -29,8 +38,8 @@ export interface LanyardBadgeProps {
   /** 底部编号，像真工牌那样 */
   serial?: string
   /**
-   * 证件照。给了照片就换成「照片 + 姓名条」的排法：
-   * 照片占掉中间那块，卡面字号和条码跟着收，字数最多的那句话让位。
+   * 证件照。给了照片就是双面卡：正面整幅照片，背面才是信息（点一下翻面）。
+   * 不给就还是原来那张单面卡。
    */
   photo?: string
   photoAlt?: string
@@ -49,6 +58,7 @@ export default function LanyardBadge({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const reduced = usePrefersReducedMotion()
+  const [flipped, setFlipped] = useState(false)
 
   useEffect(() => {
     const wrap = wrapRef.current
@@ -67,6 +77,10 @@ export default function LanyardBadge({
     let lastTime = 0
     let accumulator = 0
     let pointerId: number | null = null
+    /* 点击判定：按下时记位置与时刻，动过 TAP_SLOP 就降级成拖拽 */
+    let downX = 0
+    let downY = 0
+    let moved = false
 
     const readBrand = () => {
       const key = document.documentElement.dataset.theme ?? 'default'
@@ -199,15 +213,25 @@ export default function LanyardBadge({
 
     const onPointerMove = (event: PointerEvent) => {
       if (pointerId === null || event.pointerId !== pointerId) return
+      if (!moved && Math.hypot(event.clientX - downX, event.clientY - downY) > TAP_SLOP) {
+        moved = true
+        // 真的拖动过才收起「拖一下」，而不是按下就收 —— 否则点一下翻面也会把它带走
+        card.dataset.dragged = 'true'
+      }
       const rect = wrap.getBoundingClientRect()
       solver.moveHand(event.clientX - rect.left, event.clientY - rect.top)
     }
 
     const onPointerUp = (event: PointerEvent) => {
       if (pointerId === null || event.pointerId !== pointerId) return
+      const tapped = !moved
       solver.endDrag()
       delete card.dataset.dragging
       stopListening()
+      if (tapped) {
+        card.dataset.seen = 'true'
+        setFlipped((value) => !value)
+      }
       start()
     }
 
@@ -224,8 +248,10 @@ export default function LanyardBadge({
       const rect = wrap.getBoundingClientRect()
       solver.beginDrag(event.clientX - rect.left, event.clientY - rect.top)
       pointerId = event.pointerId
+      downX = event.clientX
+      downY = event.clientY
+      moved = false
       card.dataset.dragging = 'true'
-      card.dataset.touched = 'true'
       try {
         // 抓住指针，鼠标甩出窗口也不会把事件丢掉
         card.setPointerCapture(event.pointerId)
@@ -335,37 +361,62 @@ export default function LanyardBadge({
     }
   }, [reduced])
 
+  /* 背面：原来那张卡的排法，一个字都没动 —— 照片站正面之后，信息终于有整张卡可用 */
+  const info = (
+    <>
+      <span className="lanyard__mark" aria-hidden>
+        学
+      </span>
+      <p className="lanyard__brand">
+        <span className="lanyard__dot" aria-hidden />
+        学习外脑
+      </p>
+      <p className="lanyard__handle">{handle}</p>
+      <p className="lanyard__role">{role}</p>
+      <p className="lanyard__quote">写能读懂的代码，做摸得到的界面。</p>
+      <span className="lanyard__barcode" aria-hidden />
+      <p className="lanyard__foot">
+        <span>{serial}</span>
+        <span className="lanyard__hint">拖一下</span>
+      </p>
+    </>
+  )
+
   return (
     <div ref={wrapRef} className={cn('lanyard', className)}>
       <canvas ref={canvasRef} className="lanyard__strap" aria-hidden />
-      <div ref={cardRef} className="lanyard__card" data-photo={photo ? '' : undefined}>
-        <p className="lanyard__brand">
-          <span className="lanyard__dot" aria-hidden />
-          学习外脑
-        </p>
-
-        {photo ? (
-          /*
-           * 照片用 <img> 而不是 background-image：它是卡上的内容，该被读屏读到、
-           * 该在预渲染的 HTML 里就有 src，也该跟着 base 路径走。
-           */
-          <figure className="lanyard__photo">
-            <img src={photo} alt={photoAlt} draggable={false} decoding="async" />
-          </figure>
-        ) : (
-          <span className="lanyard__mark" aria-hidden>
-            学
-          </span>
-        )}
-
-        <p className="lanyard__handle">{handle}</p>
-        <p className="lanyard__role">{role}</p>
-        {!photo && <p className="lanyard__quote">写能读懂的代码，做摸得到的界面。</p>}
-        <span className="lanyard__barcode" aria-hidden />
-        <p className="lanyard__foot">
-          <span>{serial}</span>
-          <span className="lanyard__hint">拖一下</span>
-        </p>
+      <div
+        ref={cardRef}
+        className="lanyard__card"
+        data-flipped={photo && flipped ? '' : undefined}
+        role={photo ? 'button' : undefined}
+        tabIndex={photo ? 0 : undefined}
+        aria-label={photo ? (flipped ? '工牌背面，点一下翻回照片' : '工牌正面，点一下看背面') : undefined}
+        onKeyDown={
+          photo
+            ? (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return
+                event.preventDefault()
+                setFlipped((value) => !value)
+              }
+            : undefined
+        }
+      >
+        <div className="lanyard__flip">
+          <div className={cn('lanyard__face', photo ? 'lanyard__face--photo' : 'lanyard__face--info')}>
+            {photo ? (
+              <>
+                <img src={photo} alt={photoAlt} draggable={false} decoding="async" loading="lazy" />
+                {/* 底部压一层渐变：翻面提示压在花衣服上也读得出来 */}
+                <span className="lanyard__scrim" aria-hidden />
+                <span className="lanyard__fliphint">点一下翻面</span>
+              </>
+            ) : (
+              info
+            )}
+          </div>
+          {photo && <div className="lanyard__face lanyard__face--info lanyard__face--back">{info}</div>}
+        </div>
       </div>
     </div>
   )
