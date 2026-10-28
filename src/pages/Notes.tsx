@@ -1,12 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { X } from 'lucide-react'
 import { NoteRow } from '@/components/notes/NoteRow'
 import { StatusDot } from '@/components/common/StatusDot'
 import { TagChip } from '@/components/common/TagChip'
-import { notes, statusHints, statusLabels, topicLabels } from '@/lib/content'
+import { notes, statusHints, statusLabels, tagIndex, topicLabels } from '@/lib/content'
 import type { NoteStatus, TopicId } from '@/lib/content'
 import { cn } from '@/lib/utils'
 
 const statuses: NoteStatus[] = ['seedling', 'growing', 'evergreen']
+const topicIds = Object.keys(topicLabels) as TopicId[]
 
 // 构建期常量（vite define 注入）：服务端和客户端算出来必须是同一个数
 const daysSinceLatestUpdate = notes[0]
@@ -18,9 +21,38 @@ const daysSinceLatestUpdate = notes[0]
     )
   : 0
 
+/** 筛选状态全部住在 URL 里：刷新不丢，能直接发给别人，也能从命令面板跳进来 */
+type Filters = {
+  topic: TopicId | 'all'
+  status: NoteStatus | 'all'
+  tag: string | null
+}
+
 export default function Notes() {
-  const [topic, setTopic] = useState<TopicId | 'all'>('all')
-  const [status, setStatus] = useState<NoteStatus | 'all'>('all')
+  const [params, setParams] = useSearchParams()
+
+  // 参数来自地址栏，可能是手改的、也可能是旧链接，逐个校验再用
+  const rawTopic = params.get('topic')
+  const rawStatus = params.get('status')
+  const filters: Filters = {
+    topic: rawTopic && topicIds.includes(rawTopic as TopicId) ? (rawTopic as TopicId) : 'all',
+    status:
+      rawStatus && statuses.includes(rawStatus as NoteStatus) ? (rawStatus as NoteStatus) : 'all',
+    tag: params.get('tag') || null,
+  }
+
+  const apply = (patch: Partial<Filters>) => {
+    const next = new URLSearchParams(params)
+    const write = (key: string, value: string | null | undefined) => {
+      if (!value || value === 'all') next.delete(key)
+      else next.set(key, value)
+    }
+    if ('topic' in patch) write('topic', patch.topic)
+    if ('status' in patch) write('status', patch.status)
+    if ('tag' in patch) write('tag', patch.tag)
+    // replace：连点几次筛选不该在浏览器历史里留一串记录
+    setParams(next, { replace: true })
+  }
 
   const topics = useMemo(() => {
     const counts = new Map<TopicId, number>()
@@ -32,12 +64,14 @@ export default function Notes() {
     () =>
       notes.filter(
         (note) =>
-          (topic === 'all' || note.meta.topic === topic) &&
-          (status === 'all' || note.meta.status === status),
+          (filters.topic === 'all' || note.meta.topic === filters.topic) &&
+          (filters.status === 'all' || note.meta.status === filters.status) &&
+          (!filters.tag || note.meta.tags.includes(filters.tag)),
       ),
-    [topic, status],
+    [filters.topic, filters.status, filters.tag],
   )
 
+  const dirty = filters.topic !== 'all' || filters.status !== 'all' || filters.tag !== null
   const latestDays = daysSinceLatestUpdate
 
   return (
@@ -57,10 +91,10 @@ export default function Notes() {
           <div className="mt-2 flex flex-wrap gap-1.5 lg:flex-col lg:items-start">
             <button
               type="button"
-              onClick={() => setTopic('all')}
+              onClick={() => apply({ topic: 'all' })}
               className={cn(
                 'text-meta transition-colors duration-[var(--motion-fast)]',
-                topic === 'all' ? 'text-fg' : 'text-muted hover:text-fg',
+                filters.topic === 'all' ? 'text-fg' : 'text-muted hover:text-fg',
               )}
             >
               全部 <span className="font-mono text-label text-faint">{notes.length}</span>
@@ -69,10 +103,10 @@ export default function Notes() {
               <button
                 key={id}
                 type="button"
-                onClick={() => setTopic(id)}
+                onClick={() => apply({ topic: id })}
                 className={cn(
                   'text-meta transition-colors duration-[var(--motion-fast)]',
-                  topic === id ? 'text-fg' : 'text-muted hover:text-fg',
+                  filters.topic === id ? 'text-fg' : 'text-muted hover:text-fg',
                 )}
               >
                 {topicLabels[id]} <span className="font-mono text-label text-faint">{count}</span>
@@ -87,11 +121,11 @@ export default function Notes() {
                 <li key={item}>
                   <button
                     type="button"
-                    onClick={() => setStatus((prev) => (prev === item ? 'all' : item))}
-                    aria-pressed={status === item}
+                    onClick={() => apply({ status: filters.status === item ? 'all' : item })}
+                    aria-pressed={filters.status === item}
                     className={cn(
                       'w-full text-left transition-opacity duration-[var(--motion-fast)]',
-                      status === item ? 'opacity-100' : 'opacity-70 hover:opacity-100',
+                      filters.status === item ? 'opacity-100' : 'opacity-70 hover:opacity-100',
                     )}
                   >
                     <StatusDot status={item} />
@@ -106,27 +140,40 @@ export default function Notes() {
         </aside>
 
         <div>
-          <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
-            <span className="font-mono text-label text-faint">{filtered.length} 条结果</span>
-            {(topic !== 'all' || status !== 'all') && (
+          <div className="mb-3 flex items-center justify-between gap-3 border-b border-line pb-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
+              <span className="font-mono text-label text-faint">{filtered.length} 条结果</span>
+              {filters.tag ? (
+                <button
+                  type="button"
+                  onClick={() => apply({ tag: null })}
+                  className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand-soft px-2 py-0.5 font-mono text-label text-brand transition-colors hover:border-brand"
+                  aria-label={`取消 ${filters.tag} 标签筛选`}
+                >
+                  #{filters.tag}
+                  <X className="h-3 w-3" aria-hidden />
+                </button>
+              ) : null}
+            </div>
+            {dirty ? (
               <button
                 type="button"
-                onClick={() => {
-                  setTopic('all')
-                  setStatus('all')
-                }}
-                className="text-label text-muted transition-colors hover:text-fg"
+                onClick={() => setParams(new URLSearchParams(), { replace: true })}
+                className="shrink-0 text-label text-muted transition-colors hover:text-fg"
               >
                 清除筛选
               </button>
-            )}
+            ) : null}
           </div>
 
           {filtered.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-body text-muted">这个组合下还没有笔记。</p>
+              <p className="text-body text-muted">
+                {filters.tag ? `还没有笔记带 #${filters.tag} 这个标签。` : '这个组合下还没有笔记。'}
+              </p>
               <p className="mt-2 text-meta text-faint">
-                成熟度里的「{status !== 'all' ? statusLabels[status] : '—'}」通常是缺口最大的地方。
+                成熟度里的「{filters.status !== 'all' ? statusLabels[filters.status] : '—'}
+                」通常是缺口最大的地方。
               </p>
             </div>
           ) : (
@@ -137,9 +184,16 @@ export default function Notes() {
             </div>
           )}
 
+          {/* 标签按篇数倒序：用得多的排在前面，比按字母排更有信息 */}
           <div className="mt-6 flex flex-wrap gap-1.5">
-            {[...new Set(notes.flatMap((note) => note.meta.tags))].slice(0, 12).map((tag) => (
-              <TagChip key={tag}>{tag}</TagChip>
+            {tagIndex.slice(0, 12).map(([tag]) => (
+              <TagChip
+                key={tag}
+                active={filters.tag === tag}
+                onClick={() => apply({ tag: filters.tag === tag ? null : tag })}
+              >
+                {tag}
+              </TagChip>
             ))}
           </div>
         </div>

@@ -133,6 +133,20 @@ export const searchIndex: SearchItem[] = [
   })),
 ]
 
+/**
+ * 标签 → 篇数，按篇数倒序。
+ *
+ * 排序只用计数、同数保持 Map 的插入顺序，不用 localeCompare —— 那个依赖运行时
+ * 的 ICU，Node 和浏览器可能给出不同结果，预渲染和注水就会对不上。
+ */
+export const tagIndex: Array<[string, number]> = (() => {
+  const counts = new Map<string, number>()
+  for (const item of searchIndex) {
+    for (const tag of item.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])
+})()
+
 /** 首页「现在」这一段的数据是真的，不是占位符 */
 export const nowItems = [
   {
