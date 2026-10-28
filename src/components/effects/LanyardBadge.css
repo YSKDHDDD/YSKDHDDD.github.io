@@ -1,0 +1,183 @@
+/* ==========================================================================
+   工牌：canvas 画带子，DOM 画卡片
+   ========================================================================== */
+
+.lanyard {
+  /* JS 会按容器尺寸覆盖这三个值，这里只是预渲染时的兜底 */
+  --card-w: 200px;
+  --card-h: 272px;
+  --rest-top: 24%;
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 900px;
+}
+
+.lanyard__strap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lanyard__card {
+  position: absolute;
+  left: 50%;
+  top: var(--rest-top);
+  width: var(--card-w);
+  height: var(--card-h);
+  /* 用独立的 translate 做居中，transform 留给每帧的位移与旋转 */
+  translate: -50% 0;
+  transform-origin: 50% 0;
+  will-change: transform;
+
+  display: flex;
+  flex-direction: column;
+  padding: 1.5em 1.05em 1em;
+  border-radius: 0.85em;
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(
+    158deg,
+    color-mix(in oklab, var(--surface) 86%, var(--brand)),
+    var(--surface) 62%
+  );
+  box-shadow:
+    0 26px 60px -28px rgb(0 0 0 / 0.55),
+    0 2px 10px -4px rgb(0 0 0 / 0.28),
+    inset 0 1px 0 rgb(255 255 255 / 0.07);
+
+  font-size: calc(var(--card-w) / 15);
+  overflow: hidden;
+  cursor: grab;
+  /* 卡片上按下就进入拖拽，不能让浏览器先把手势判成滚动 */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.lanyard__card[data-dragging='true'] {
+  cursor: grabbing;
+}
+
+/* 左侧品牌竖条 */
+.lanyard__card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--brand);
+}
+
+/* 顶部的挂绳孔 */
+.lanyard__card::after {
+  content: '';
+  position: absolute;
+  top: 0.62em;
+  left: 50%;
+  width: 2.2em;
+  height: 0.32em;
+  translate: -50% 0;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.42);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.55);
+}
+
+.lanyard__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.6em;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+.lanyard__dot {
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 999px;
+  background: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 22%, transparent);
+}
+
+.lanyard__handle {
+  margin: 1.5em 0 0;
+  font-size: 1.75em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--fg);
+  word-break: break-all;
+}
+
+.lanyard__role {
+  margin: 0.6em 0 0;
+  font-size: 0.66em;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* 右侧一个巨大的品牌字：只负责压住中段那片空，不用来读 */
+.lanyard__mark {
+  position: absolute;
+  top: 2.1em;
+  right: -0.12em;
+  font-size: 6.2em;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  color: var(--brand);
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+/* 一句话立场：卡上的空白总得有个理由，不如放一句能代表这个人的话 */
+.lanyard__quote {
+  margin: 1.5em 0 0;
+  max-width: 13em;
+  font-size: 0.62em;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+/* 条码那一块单独成段：上面留白是「信息区结束」，不是没排满 */
+.lanyard__barcode {
+  margin-top: auto;
+  width: 74%;
+  height: 2.3em;
+  border-radius: 1px;
+  opacity: 0.5;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--fg) 0 1px,
+    transparent 1px 3px,
+    var(--fg) 3px 5px,
+    transparent 5px 6px,
+    var(--fg) 6px 8px,
+    transparent 8px 11px
+  );
+}
+
+.lanyard__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5em;
+  margin: 0.8em 0 0;
+  padding-top: 0.7em;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.58em;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+}
+
+/* 「拖一下」是这一页唯一一次自夸，抓过一次就消失 */
+.lanyard__hint {
+  transition: opacity var(--motion-base) var(--motion-ease-soft);
+}
+
+.lanyard__card[data-touched] .lanyard__hint {
+  opacity: 0;
+}

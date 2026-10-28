@@ -5,6 +5,7 @@ import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
 import DecryptedText from '@/components/effects/DecryptedText'
 import Dock, { type DockItemData } from '@/components/effects/Dock'
 import GlowBorder from '@/components/effects/GlowBorder'
+import LanyardBadge from '@/components/effects/LanyardBadge'
 import MagneticButton from '@/components/effects/MagneticButton'
 import ScrollExpand from '@/components/effects/ScrollExpand'
 import TiltCard from '@/components/effects/TiltCard'
@@ -174,6 +175,17 @@ export default function Me() {
         </div>
 
         {/*
+          工牌挂在首屏：身份这件事，做成能抓的东西比写一行「你好，我是…」有用。
+          窄屏排在正文之后，xl 起挪到右侧空出来的那一列。
+        */}
+        <div className="me-lanyard">
+          <LanyardBadge
+            handle={SITE.github.split('/').pop() ?? 'ME'}
+            role="前端 · TypeScript · 构建管线"
+          />
+        </div>
+
+        {/*
           滚动提示抬到 Dock 之上：Dock 现在常驻底部，原来 24px 的位置会被它盖住。
           留出的高度按 Dock 的厚度（68px）加底边距算，正好卡在面板上沿外面。
         */}
@@ -292,7 +304,7 @@ export default function Me() {
               是砍剩下的。
             </p>
             <p className="mt-5 text-[14px] leading-relaxed text-white/70">
-              这一页用了七个效果，任意一屏都不会同时跑两个。删掉的比留下的多，界面才开始有形状。
+              这一页用了八个效果，任意一屏都不会同时跑两个。删掉的比留下的多，界面才开始有形状。
             </p>
           </div>
         </ScrollExpand>

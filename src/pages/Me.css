@@ -30,6 +30,39 @@
   animation: me-hint 2.6s var(--motion-ease-soft) infinite;
 }
 
+/* ---------- 首屏的工牌 ---------- */
+
+/**
+ * 只在 md 以上挂出来。
+ *
+ * 手机上它没有位置：首屏从标题到统计行已经占满一列，工牌要么压住字，
+ * 要么被常驻 Dock 切成两半。宁可这一档不给，也不放一个半截的东西。
+ * md 起右侧空出一条，带子从首屏上沿垂下来，才算真的「挂着」。
+ */
+.me-lanyard {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .me-lanyard {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 1.5rem;
+    z-index: 1;
+    width: min(32vw, 260px);
+    height: min(72vh, 560px);
+  }
+}
+
+@media (min-width: 1280px) {
+  .me-lanyard {
+    right: 3.5rem;
+    width: 300px;
+    height: min(78vh, 660px);
+  }
+}
+
 @keyframes me-hint {
   0%,
   100% {
