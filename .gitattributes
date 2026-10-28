@@ -1,0 +1,13 @@
+# 统一按 LF 提交。
+# 不加这一条，Windows 上的 git 会按 autocrlf 把工作区文件签出成 CRLF，
+# 于是每次提交都夹带整文件级别的「改动」，CI（Linux）与本地 diff 也对不上。
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary

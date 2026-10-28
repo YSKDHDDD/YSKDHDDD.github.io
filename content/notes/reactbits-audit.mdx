@@ -1,0 +1,108 @@
+---
+title: 从 13 个类型错误里读出的结构问题
+date: 2026-10-27
+updated: 2026-10-27
+topic: engineering
+tags: [typescript, tailwind, refactor]
+status: evergreen
+summary: 一个能跑的页面，为什么 tsc 退出码是 2？顺着 13 个错误摸下去，发现的问题都不在类型层面。
+---
+
+这个项目最初的判断是"已经实现了一些功能"。它确实能跑，四个自带 CSS 的效果组件都活着。但只要把 `tsc -b` 跑一遍，退出码就是 **2**，13 个错误。
+
+真正的发现是：**这 13 个错误没有一个是类型问题，它们全都是结构问题在类型系统里的投影。**
+
+## 错误一：构建产物里还留着 `@tailwind`
+
+`src/index.css` 开头三行是 Tailwind 的 v3 指令：
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+而 `package.json` 里没有 `tailwindcss`，没有 `postcss`，根目录也没有任何配置文件。
+
+字符串本身不会报错，所以编译器和浏览器都很安静。**唯一的证据在产物里**：
+
+```bash
+$ head -c 120 dist/assets/index-DDREM-vb.css
+@tailwind base;@tailwind components;@tailwind utilities;body{color:#fff;...
+```
+
+三行指令原样保留，说明 Tailwind 的编译从未发生。于是 `App.tsx` 和 `ui/*.tsx` 里 91 处工具类全是死代码：`flex`、`min-h-screen`、`text-8xl`、`backdrop-blur-xl`、`md:` 响应式，一个都不生效。
+
+页面看起来"部分实现了"，是因为那四个 ReactBits 组件各自带了独立 CSS 文件。**视觉效果全由例外支撑，规则本身是坏的。**
+
+<Callout type="decision" title="判断">
+一个依赖没装，却让 400 行代码的样式全部失效，而项目"看起来还行"。这说明缺少的是**验证手段**，不是某个包。
+</Callout>
+
+## 错误二：两个未导入的标识符
+
+`App.tsx` 第 359 行用了 `<Dock />`，import 列表里没有 `Dock`；第 332 行用了 `<X />`，`X` 从未定义。
+
+这不是"少个图标"。`Dock` 未定义意味着渲染时抛 `ReferenceError`，整棵 React 树挂掉，页面白屏。而我当时看到的"能跑"，其实是浏览器缓存里旧版本的错觉。
+
+```tsx
+// 之前
+import { Tabs } from './components/ui/Tabs'
+// ... 中间 400 行
+<Dock items={items} />   // ReferenceError: Dock is not defined
+
+// 之后：导入收敛到一处，图标统一交给 lucide-react
+import { ArrowRight, Info, Star, X } from 'lucide-react'
+import Dock from '@/components/effects/Dock'
+```
+
+## 错误三：`noUnusedLocals` 把墓碑照出来了
+
+剩下 10 个错误几乎都是"声明但未使用"：`Tooltip`、`Dialog` 全家、`Trash`。
+
+这类错误通常被当成噪音，`noUnusedLocals: false` 一关就没了。但在这里它精确地指出：**有一整套组件写完了没接入**。`Dialog` 写好了，页面用的是原生 `<dialog>` 加 `document.getElementById`；`Tooltip` 写好了，`App.tsx` 传的参数和它的 API 对不上。
+
+关掉这条规则，等于把唯一能发现"写完没接线"的探照灯关掉。
+
+## "假组件"比 bug 更贵
+
+比未使用更隐蔽的，是**实现了外观但没实现行为**的组件。
+
+| 组件 | 表面 | 实际 |
+| --- | --- | --- |
+| `Tabs` | 三个 tab 按钮 | 没有 context，`data-state` 恒为 `inactive`，三段内容同时渲染 |
+| `Tooltip` | 悬停提示 | 没有 hover 逻辑，内容常显，且 API 要求 `content` prop |
+| `cn()` | 类名合并 | 手写拼接，去重逻辑写错了，不处理 Tailwind 冲突 |
+
+这类代码的问题是**它消耗的是信任**。测试不会失败，类型不会报错，页面甚至看起来是对的——直到有人点了一下。
+
+<Callout type="warn" title="代价">
+假组件的成本不在写它的时候，而在别人以为它能用的时候。修 `Tabs` 花的时间，比从零写一个 WAI-ARIA 合规的 Tabs 更长。
+</Callout>
+
+## 结构比修复顺序更重要
+
+修完这些错误后我做的第一件事不是庆祝，而是把 407 行的 `App.tsx` 拆掉：
+
+```text
+src/
+├─ App.tsx                # 30 行，只决定 section 顺序
+├─ sections/              # 4 个分区各一个文件
+├─ components/effects/    # 效果组件与自己的 CSS 同层
+├─ components/layout/     # 导航
+├─ hooks/                 # useActiveSection
+├─ data/                  # 分区清单，导航与高亮共用
+└─ lib/                   # cn()
+```
+
+拆分之后，同样的 13 个错误里有一半根本没有发生的空间——因为"声明了没接线"需要一个地方同时容纳声明和接线，而拆分把这个空间消灭了。
+
+<Callout type="unverified" title="待验证">
+"拆分能预防未使用导入"这条我只在一个项目里观察到，样本量是 1。更可能的解释是：拆分之后每个文件都变短了，人和工具都更容易看见全貌。
+</Callout>
+
+## 收获
+
+- **依赖缺失必须是构建期失败。** 一个引用了不存在插件的 CSS 文件，应该让构建挂掉，而不是静默输出死指令。
+- **不要关掉 `noUnusedLocals`。** 它是最便宜的死代码检测器。
+- **判断"实现了"要看向产物，不是看屏幕。** 缓存会让旧构建看起来像新功能。

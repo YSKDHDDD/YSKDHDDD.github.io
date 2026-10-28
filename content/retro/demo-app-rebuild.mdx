@@ -1,0 +1,98 @@
+---
+title: 重构一个「看起来能跑」的演示站
+date: 2026-10-27
+updated: 2026-10-27
+topic: engineering
+tags: [refactor, tailwind, mdx]
+status: evergreen
+summary: 从白屏到可用，中间隔着的不是修 Bug，而是重新决定这个站到底要证明什么。
+period: 2026.10 · 2 天
+role: 独立完成（结构设计 / 实现 / 验证）
+stack: [React 19, TypeScript 6, Vite 8, Tailwind v4, MDX]
+metrics: [{"label":"类型错误","before":"13","after":"0"},{"label":"App.tsx","before":"407 行","after":"30 行"},{"label":"构建产出的 CSS","before":"11 KB（无效）","after":"49 KB（生效）"},{"label":"ESLint 警告","before":"5","after":"0"}]
+---
+
+## 1. 问题与约束
+
+接手时项目的状态是"部分功能可用"：四个效果组件带着自己的 CSS 活着，其余全靠 Tailwind 工具类——而 Tailwind 从未安装。
+
+约束有三条：
+
+- **不能换栈**：React + Vite 是既成事实，重写没有收益；
+- **必须留住效果组件**：它们是这个项目的起点，也是最贵的资产；
+- **要有可验证的完成度**：不能再用"看起来能跑"作为验收标准。
+
+<Callout type="warn" title="真实的起点">
+`npm run build` 失败，`tsc -b` 退出码 2，渲染时 `ReferenceError` 直接白屏。而 `dist/` 是两天前的产物——我之前看到的"能跑"是缓存。
+</Callout>
+
+## 2. 关键决策
+
+<DecisionCard
+  index="01"
+  title="先修样式层，还是先修白屏"
+  options={[
+    { label: '先修导入', note: '两行代码，立刻能看见页面' },
+    { label: '先接 Tailwind', note: '改动大，但决定后续所有页面的工作量' },
+  ]}
+  chosen="先接 Tailwind，同一次提交里修导入"
+  reason="白屏消失之后页面会是裸的，看不出修好了没有。样式层先通，修导入的收益才可验证。"
+  cost="单次改动面更大，需要一次完整的构建验证。"
+/>
+
+<DecisionCard
+  index="02"
+  title="那 6 个手写的 ui 组件怎么处理"
+  options={[
+    { label: '手工修补', note: '保留现有代码，逐个补状态与键盘行为' },
+    { label: 'shadcn CLI 重装', note: '直接拿到基于 Radix 的版本' },
+  ]}
+  chosen="手工修补（Tabs / Tooltip / Dialog 三个重写）"
+  reason="项目没有 components.json，init 会覆盖我刚调好的 index.css 令牌层。保住设计系统的优先级高于省时间。"
+  cost="Tabs 的键盘导航与焦点管理要自己实现，代码量约三倍。"
+/>
+
+<DecisionCard
+  index="03"
+  title="Dock 要不要做全站导航"
+  options={[
+    { label: '保留 Dock', note: '视觉效果强，是这个项目最出彩的组件' },
+    { label: '换成顶部栏', note: '阅读站的标准形态，但少一个亮点' },
+  ]}
+  chosen="Dock 降级为效果页展品"
+  reason="Dock 的隐喻是「应用切换」，而这个站的核心行为是阅读与检索。底部浮层在长文里会一直干扰。能为了体验砍掉自己喜欢的效果，本身就是一次产品判断。"
+  cost="首屏少了一个强视觉锤，需要别的方式建立第一印象。"
+/>
+
+## 3. 结果
+
+| 指标 | 前 | 后 |
+| --- | --- | --- |
+| 类型错误 | 13 | 0 |
+| App.tsx | 407 行 | 30 行 |
+| 构建 CSS | 11 KB（三行死指令） | 49 KB（真实工具类） |
+| ESLint 警告 | 5 | 0 |
+
+结构上，`App.tsx` 从"什么都干"变成纯编排，内容层从硬编码变成 MDX：
+
+```text
+src/
+├─ App.tsx           # 路由表
+├─ layout/           # 导航、页脚、命令面板
+├─ pages/            # 7 个路由
+├─ components/       # effects / mdx / notes / common / ui
+└─ lib/content.ts    # 构建期索引
+content/
+├─ notes/*.mdx       # 6 篇
+└─ retro/*.mdx       # 2 篇
+```
+
+## 4. 如果重来
+
+只改一件事：**第一版就装 Tailwind。**
+
+那 91 处工具类从第一天起就是死代码，而它们看起来完全正常。如果构建立刻失败，后面两周的所有工作都会建立在一个真的能用的样式层上，不会出现"这个是靠组件自带 CSS 撑起来的，那个是巧合"这种判断不清的状态。
+
+<Callout type="unverified" title="待验证">
+"依赖缺失应该让构建挂掉"这条我没找到通用做法。CSS 的 `@tailwind` 在语法上是合法的 at-rule，构建工具没有理由拒绝它。可能的方案是在 CI 里加一条断言：产物 CSS 中不得出现 `@tailwind` 字样。
+</Callout>

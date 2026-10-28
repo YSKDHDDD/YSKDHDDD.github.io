@@ -1,0 +1,399 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   设计令牌
+   主题切换靠 data-theme，页面在首帧前由 index.html 的内联脚本决定，
+   所以这里只需要两份定义，不需要媒体查询。
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0b0f19;
+  --bg-subtle: #0d1220;
+  --surface: #121826;
+  --surface-2: #182033;
+  --line: rgb(255 255 255 / 0.08);
+  --line-strong: rgb(255 255 255 / 0.16);
+
+  --fg: #e6e8ee;
+  --muted: #9aa3b2;
+  --faint: #6b7484;
+
+  --brand: #6366f1;
+  --brand-soft: rgb(99 102 241 / 0.12);
+  --decision: #f0b429;
+  --warn: #e5534b;
+  --unverified: #4b9ce5;
+  --evergreen: #3fbf7f;
+
+  --code-bg: #0c111d;
+
+  /* 动效：只有三档，写死在变量里，组件不许自己编时长 */
+  --motion-fast: 120ms;
+  --motion-base: 220ms;
+  --motion-in: 400ms;
+  --motion-ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #fcfcfd;
+  --bg-subtle: #f4f5f8;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --line: rgb(9 12 20 / 0.09);
+  --line-strong: rgb(9 12 20 / 0.16);
+
+  --fg: #16181d;
+  --muted: #525b68;
+  --faint: #7d8695;
+
+  --brand: #4f46e5;
+  --brand-soft: rgb(79 70 229 / 0.08);
+  --decision: #9a6700;
+  --warn: #b42318;
+  --unverified: #1a6bb5;
+  --evergreen: #1d7a4d;
+
+  --code-bg: #f7f8fa;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-decision: var(--decision);
+  --color-warn: var(--warn);
+  --color-unverified: var(--unverified);
+  --color-evergreen: var(--evergreen);
+
+  /* 不加载 Inter / 中文字体包：系统栈在中文环境下渲染更稳，也省 300KB */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* 字阶 ratio ≈ 1.23，只有 400 / 500 两个字重 */
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.04em;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.6;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.8;
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.5;
+  --text-h2: 1.5625rem;
+  --text-h2--line-height: 1.35;
+  --text-h1: 1.9375rem;
+  --text-h1--line-height: 1.2;
+  --text-display: 3.0625rem;
+  --text-display--line-height: 1.1;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --ease-soft: var(--motion-ease-soft);
+  --ease-expo: var(--motion-ease-expo);
+}
+
+/* ==========================================================================
+   基础层
+   ========================================================================== */
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 96px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: rgb(99 102 241 / 0.28);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--line-strong);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* 极细的分隔纹理，替代重阴影 */
+@utility hairline-b {
+  border-bottom: 1px solid var(--line);
+}
+
+@utility page-shell {
+  width: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+/* ==========================================================================
+   入场动效：唯一被允许出现在列表页的动效（见 DESIGN_PLAN §4）
+   ========================================================================== */
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+[data-reveal='shown'] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--motion-base) var(--motion-ease-soft),
+    transform var(--motion-base) var(--motion-ease-soft);
+}
+
+/* ==========================================================================
+   长文排版作用域
+   ========================================================================== */
+
+.prose-note {
+  font-size: var(--text-body);
+  line-height: 1.8;
+  color: color-mix(in oklab, var(--fg) 92%, transparent);
+}
+
+.prose-note > * + * {
+  margin-top: 1.2em;
+}
+
+.prose-note h2 {
+  margin-top: 2.6em;
+  margin-bottom: 0.7em;
+  font-size: var(--text-h2);
+  line-height: 1.35;
+  font-weight: 500;
+  letter-spacing: -0.011em;
+  color: var(--fg);
+}
+
+.prose-note h3 {
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+  font-size: var(--text-h3);
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.prose-note h2 .anchor,
+.prose-note h3 .anchor {
+  color: inherit;
+  text-decoration: none;
+}
+
+.prose-note h2:hover .anchor::after,
+.prose-note h3:hover .anchor::after {
+  content: '#';
+  margin-left: 0.4em;
+  color: var(--faint);
+  font-weight: 400;
+}
+
+.prose-note p {
+  color: color-mix(in oklab, var(--fg) 88%, var(--muted));
+}
+
+.prose-note a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 4px;
+  transition: text-decoration-color var(--motion-fast) var(--motion-ease-soft);
+}
+
+.prose-note a:hover {
+  text-decoration-color: var(--brand);
+}
+
+.prose-note strong {
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.prose-note ul,
+.prose-note ol {
+  padding-left: 1.35em;
+}
+
+.prose-note ul {
+  list-style: disc;
+}
+
+.prose-note ol {
+  list-style: decimal;
+}
+
+.prose-note li + li {
+  margin-top: 0.45em;
+}
+
+.prose-note li::marker {
+  color: var(--faint);
+}
+
+.prose-note blockquote {
+  border-left: 2px solid var(--line-strong);
+  padding-left: 1em;
+  color: var(--muted);
+}
+
+.prose-note hr {
+  margin-block: 2.5em;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.prose-note :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+  background-color: var(--surface-2);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+/* 代码块：rehype-pretty-code 产出 figure > pre > code */
+.prose-note figure[data-rehype-pretty-code-figure] {
+  margin-block: 1.8em;
+}
+
+.prose-note pre {
+  overflow-x: auto;
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background-color: var(--code-bg);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+
+.prose-note pre code {
+  font-family: var(--font-mono);
+  display: grid;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* 双主题：颜色由插件写进 --shiki-dark / --shiki-light */
+[data-theme='dark'] .prose-note pre,
+[data-theme='dark'] .prose-note pre span {
+  color: var(--shiki-dark);
+}
+
+[data-theme='light'] .prose-note pre,
+[data-theme='light'] .prose-note pre span {
+  color: var(--shiki-light);
+}
+
+.prose-note pre [data-line] {
+  padding-inline: 0.15rem;
+}
+
+.prose-note pre [data-highlighted-line] {
+  background-color: var(--brand-soft);
+  box-shadow: inset 2px 0 0 var(--brand);
+}
+
+.prose-note table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-meta);
+  line-height: 1.6;
+}
+
+.prose-note th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.prose-note td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.prose-note figure figcaption {
+  font-size: var(--text-label);
+  color: var(--faint);
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+/* ==========================================================================
+   降级：不是"变快"，是直接没有
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -1,0 +1,102 @@
+---
+title: 假组件比 Bug 更贵
+date: 2026-10-20
+updated: 2026-10-22
+topic: design
+tags: [components, accessibility, api-design]
+status: evergreen
+summary: 长得像组件、用起来像组件、但没有行为——这类代码的成本不在写的时候，而在别人以为它能用的时候。
+---
+
+一个 `Tabs` 组件，三个 tab 按钮，样式完全正确。点击第一个，没反应；点击第二个，还是没反应。但三段内容**全部显示在页面上**，因为从来没有条件渲染。
+
+这就是"假组件"：**外观完整，行为为空。**
+
+## 为什么它比 Bug 更贵
+
+Bug 会失败，假组件不会。
+
+- 类型检查通过：props 都对得上
+- 构建通过：没有引用错误
+- 页面看起来对：肉眼扫一眼甚至觉得完成了
+- 测试通常也没有：因为没人觉得需要给它写测试
+
+它安静地待在那里，直到有人真的去点。而那时候通常已经过了两周，写它的人也不记得细节了。
+
+## 三个典型症状
+
+### 1. 状态写死在 DOM 上
+
+```tsx
+// 之前：data-state 是个字面量
+<TabsTrigger data-state="inactive">{children}</TabsTrigger>
+```
+
+`data-state` 在这里不是状态，是装饰。正确的做法是让它真的来自一个可变的来源：
+
+```tsx
+// 之后：状态由 context 提供
+const ctx = useTabsContext()
+const active = ctx.value === value
+
+<TabsTrigger
+  data-state={active ? 'active' : 'inactive'}
+  aria-selected={active}
+  onClick={() => ctx.onChange(value)}
+  onKeyDown={handleKeyDown}
+/>
+```
+
+### 2. API 和用法对不上
+
+`Tooltip` 要求传 `content`，页面传的是 children。结果是提示框永远空白，而类型错误被当成"用了新 API 所以报错"忽略了。
+
+API 错配是最难发现的一类，因为**两边看起来都合理**。
+
+### 3. 手写"工具函数"
+
+```ts
+// 之前：看起来在去重
+export function cn(...inputs) {
+  return inputs.filter(Boolean).join(' ').replace(/\s+/g, ' ')
+}
+```
+
+这段不会报错，但它不做真正重要的事：**处理类名冲突**。`px-2` 和 `px-4` 同时存在时，谁赢取决于 CSS 顺序，而不是调用顺序。
+
+```ts
+// 之后
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+```
+
+<Callout type="decision" title="判断">
+需要在项目里手写一个 `cn()` 的那一天，就说明"我要不要用这 2KB 依赖"这个问题已经有答案了。**基础设施不要自研。**
+</Callout>
+
+## 怎么提前发现
+
+我的检查顺序，成本从低到高：
+
+1. **搜 `data-` 属性**。凡是硬编码在 JSX 里的 `data-state="…"`，基本都是假状态。
+2. **看每个组件的 props 是否被使用**。声明了但没用到的 prop，是行为缺失的信号。
+3. **点一遍**。听起来很蠢，但这三个组件全在点击时暴露。
+4. **只用键盘再点一遍**。`Tab` 能聚焦吗？方向键能切换吗？假组件通常在第二步就崩。
+
+<Callout type="warn" title="代价">
+修比写贵。一个真正可用的 `Tabs` 需要 context、键盘导航、焦点管理、`aria-controls` 关联，代码量是"看起来能用"版本的三倍。
+</Callout>
+
+<Callout type="unverified" title="待验证">
+"假组件都源自复制粘贴"这个归因，我只在三个代码库里观察过。另一种可能是：它们在**演示代码**里是合理的——演示只需要外观——只是没人标注"这里只是样子货"。
+</Callout>
+
+## 结论
+
+写组件时给自己一个判定标准：**如果这段代码被删掉，用户能察觉到吗？**
+
+察觉不到的代码有两种：真正的样板，和假装工作的零件。前者应该删，后者应该写完。

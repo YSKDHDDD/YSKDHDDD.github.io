@@ -1,0 +1,64 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 只保留一个进行中的部署，避免连续 push 时旧构建覆盖新构建
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # base_path / base_url 由这个 action 按仓库设置推导：
+      # 用户站点（用户名.github.io）得到 '/' 与根域名，
+      # 项目站点（任意仓库名）得到 '/仓库名' 与带子路径的地址。
+      # 因此仓库改名、换绑自定义域名都不用改代码。
+      - name: 读取 Pages 配置
+        id: pages
+        uses: actions/configure-pages@v5
+
+      # ci 而不是 install：lockfile 与 package.json 不一致时应当直接失败，
+      # 否则线上产物可能和本地不是同一套依赖。
+      - run: npm ci
+
+      - name: 类型检查与 lint
+        run: |
+          npm run typecheck
+          npm run lint
+
+      - name: 构建并预渲染
+        run: npm run build
+        env:
+          VITE_SITE_URL: ${{ steps.pages.outputs.base_url }}
+          VITE_BASE: ${{ steps.pages.outputs.base_path }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

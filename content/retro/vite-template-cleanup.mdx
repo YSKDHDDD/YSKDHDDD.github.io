@@ -1,0 +1,75 @@
+---
+title: 清掉 Vite 模板的 184 行残留
+date: 2026-10-15
+updated: 2026-10-16
+topic: engineering
+tags: [cleanup, vite, css]
+status: evergreen
+summary: 没有人会主动删模板文件，所以它们会一直留在仓库里，直到有人以为它们有用。
+period: 2026.10 · 半天
+role: 独立完成
+stack: [Vite, CSS, TypeScript]
+metrics: [{"label":"未被引用的文件","before":"4","after":"0"},{"label":"App.css 行数","before":"184","after":"0"},{"label":"src 目录文件数","before":"21","after":"16"}]
+---
+
+## 1. 问题与约束
+
+`create-vite` 生成的模板里有四个文件从来没被真正用过：
+
+- `src/App.css`：184 行，含 `--accent`、`.counter`、`.hero`，全项目零引用
+- `src/assets/react.svg`、`src/assets/vite.svg`、`src/assets/hero.png`：没有 import
+
+约束是"删不能靠猜"。判断一个文件是否死代码，需要证据，不能靠扫一眼印象。
+
+<Callout type="decision" title="判定方法">
+用 `grep -rn` 搜文件名本身，而不是搜内容。CSS 被 `@import` 引用时文件名会出现在 import 语句里；图片被使用时文件名会出现在 `src` 属性里。搜不到 = 没有任何路径能到达它。
+</Callout>
+
+## 2. 关键决策
+
+<DecisionCard
+  index="01"
+  title="App.css 是删还是留"
+  options={[
+    { label: '留着', note: '万一以后要改回来' },
+    { label: '删掉', note: 'git 里有历史，随时能捞回来' },
+  ]}
+  chosen="删掉"
+  reason="「以后可能用得上」的 CSS 会一直躺在那里，然后在某次重构里被误认为设计系统的一部分。真正的设计系统在 index.css 的令牌层里。"
+  cost="需要一次性确认没有任何 import 路径。"
+/>
+
+<DecisionCard
+  index="02"
+  title="图片放在 src/assets 还是 public"
+  options={[
+    { label: 'src/assets', note: '经构建处理，带哈希，可 tree-shake' },
+    { label: 'public', note: '原样拷贝，路径稳定' },
+  ]}
+  chosen="都不放：删掉未引用的，需要时再建"
+  reason="三个模板图没有一个是这个站需要的。等真的需要插图时，再按用途决定放哪里，而不是先留一个空目录。"
+  cost="没有。"
+/>
+
+## 3. 结果
+
+```bash
+$ find src -type f | wc -l
+21   # 之前
+16   # 之后
+
+$ grep -rn "App.css" src | wc -l
+0
+```
+
+`src` 目录从 21 个文件降到 16 个，其中还包括新增的 `lib` 与 `hooks`。视觉上零变化——这正好证明了它们确实是死代码。
+
+## 4. 如果重来
+
+会早一点做这件事，但**不会在第一天做**。
+
+模板文件的价值是"让第一次 `npm run dev` 有东西可看"。在项目还没有自己的结构之前删掉它们，只会让自己面对一个空页面。正确的时机是**结构成型的那一天**——那时候你已经有能力判断哪些是模板，哪些是自己的。
+
+<Callout type="unverified" title="待验证">
+"删掉模板文件不影响任何功能"这个结论基于 `grep` 和一次完整构建。对于动态拼接的路径（比如 `` `${name}.svg` ``）这种方法会漏，本项目里没有这种写法，但通用性存疑。
+</Callout>

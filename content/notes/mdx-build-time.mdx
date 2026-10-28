@@ -1,0 +1,97 @@
+---
+title: 把内容分析搬到构建期：MDX 的一点点编译器魔法
+date: 2026-10-25
+updated: 2026-10-26
+topic: tooling
+tags: [mdx, vite, build]
+status: growing
+summary: 目录、阅读时长、标题锚点这些"能被程序算出来的东西"，不该在浏览器里再算一遍。
+---
+
+静态站点最常见的一种浪费，是把**构建期就能确定的东西**留到运行时算：拿 HTML 字符串解析目录、遍历 DOM 数标题、用正则估计阅读时长。
+
+这些工作每次访问都要做一遍，而它们的输入在构建之后就不再变了。
+
+## 一个 transform 插件解决三件事
+
+MDX 文件在交给编译器之前，会先经过我们自己的 `transform`。在这里我能拿到**原始 Markdown 源码**，于是可以顺手算出三样东西，并作为具名导出注入：
+
+```ts
+function mdxContentMeta(): Plugin {
+  return {
+    name: 'mdx-content-meta',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!id.endsWith('.mdx') || id.includes('?')) return null
+
+      const { data, body } = parseFrontmatter(code)
+      const header = [
+        `export const meta = ${JSON.stringify(data)};`,
+        `export const toc = ${JSON.stringify(extractToc(body))};`,
+        `export const readingTime = ${estimateReadingTime(body)};`,
+      ].join('\n')
+
+      return { code: `${header}\n\n${body}`, map: null }
+    },
+  }
+}
+```
+
+三个细节值得记一下：
+
+1. **`enforce: 'pre'`** 让它排在 `@mdx-js/rollup` 之前。同一 enforce 级别下，按 plugins 数组顺序执行。
+2. **`id.includes('?')` 要跳过**。`?raw`、`?url` 这类查询串也会命中 `.mdx`，改动它们会破坏 Vite 的资源处理。
+3. **`map: null`** 会让 sourcemap 断掉。内容页的行号定位我暂时不需要，但如果你要接错误堆栈，这里得传真实的 map。
+
+## 阅读时长怎么算才不离谱
+
+按空格数词对中文完全无效——一整段中文会被算成 1 个词。
+
+```ts
+function estimateReadingTime(body: string) {
+  const cjk = (body.match(/[\u4e00-\u9fa5]/g) ?? []).length
+  const words = (body.match(/[a-zA-Z0-9]+/g) ?? []).length
+  return Math.max(1, Math.round(cjk / 350 + words / 220))
+}
+```
+
+中文 350 字/分钟、西文 220 词/分钟，是两个常用的阅读速度估计。取整之后，一篇 2500 字的中文笔记是 7 分钟。
+
+## 目录锚点必须自己算
+
+`rehype-slug` 会用 `github-slugger` 生成 id，中文标题的 id 就是标题本身（去掉标点、空格转连字符）。为了 TOC 点击能跳对位置，我在构建期用的是同一套规则：
+
+```ts
+function slugify(text: string) {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
+    .replace(/\s+/g, '-')
+}
+```
+
+`\p{L}` 是关键——用 `[a-z0-9]` 的话，中文标题会被清成空字符串，所有锚点变成 `#`。
+
+<Callout type="warn" title="踩过的坑">
+第一版没加 `\p{L}`，中文标题生成的 id 全是空串。表现是点目录没反应，但控制台一点错误都没有——因为 `href="#"` 是合法的。
+</Callout>
+
+## 产物形态
+
+内容模块最终长这样，浏览器端不需要再做任何解析：
+
+```ts
+// content/notes/xxx.mdx → 编译后
+export const meta = { title: '…', date: '2026-10-25', status: 'growing', … }
+export const toc = [{ depth: 2, text: '…', id: '…' }]
+export const readingTime = 7
+
+export default function MDXContent(props) { … }
+```
+
+列表页只读 `meta` 和 `readingTime`，不需要加载正文组件。这也是首屏 JS 能压住的原因：**索引和正文是两条加载路径。**
+
+<Callout type="unverified" title="待验证">
+目前用 `import.meta.glob(..., { eager: true })` 一次性引入全部内容模块。文章到 100 篇以上时，可能需要改成非 eager 加路由级懒加载。现在的规模（8 篇）测不出差别。
+</Callout>

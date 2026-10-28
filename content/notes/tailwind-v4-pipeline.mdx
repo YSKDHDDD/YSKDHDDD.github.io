@@ -1,0 +1,104 @@
+---
+title: Tailwind v4 接入：从「指令」到「导入」的一行之差
+date: 2026-10-24
+updated: 2026-10-26
+topic: tooling
+tags: [tailwind, vite, build]
+status: growing
+summary: v3 的 @tailwind 指令在 v4 里已经不存在了。写错不会报错，只会让你的样式静默消失。
+---
+
+Tailwind v4 最大的变化不是新特性，而是**接入方式换了**。旧的三行指令在新版本里没有任何意义，但它们依然能被 CSS 解析器接受——所以写错了不会报错，只会静默失效。
+
+## 两代接入方式的区别
+
+```css
+/* v3：三条指令，靠 PostCSS 扫描内容后注入 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+```css
+/* v4：一条 import，靠 Vite 插件在构建期完成 */
+@import 'tailwindcss';
+```
+
+v4 把 PostCSS 换成了一个真正的打包器插件，所以还多了一步配置：
+
+```ts
+// vite.config.ts
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+})
+```
+
+少了这个插件，`@import 'tailwindcss'` 会由 Vite 的 CSS 处理去解析——它能找到 `node_modules` 里的文件，于是**不报错**，但也不会按你的内容生成工具类。
+
+## 怎么确认它真的在工作
+
+不要看页面，看产物里的字节数。
+
+```bash
+$ npx vite build
+dist/assets/index-*.css   49.32 kB   # 生效
+dist/assets/index-*.css   11.04 kB   # 没生效（只剩预置样式）
+```
+
+再抓几个实际用到的类名：
+
+```bash
+$ for c in min-h-screen backdrop-blur text-8xl bg-surface; do
+>   printf "%s: " "$c"; grep -c "$c" dist/assets/*.css
+> done
+min-h-screen: 1
+backdrop-blur: 3
+text-8xl: 1
+bg-surface: 1
+```
+
+## 设计令牌用 `@theme inline`
+
+v4 的 `@theme` 会把变量变成工具类，但**它默认是静态的**：切换主题时变量不会跟着变。
+
+要让主题切换生效，需要两步：语义变量定义在 `:root` 上，`@theme` 里用 `inline` 引用它们。
+
+```css
+:root {
+  --bg: #0b0f19;
+  --fg: #e6e8ee;
+}
+
+[data-theme='light'] {
+  --bg: #fcfcfd;
+  --fg: #16181d;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+}
+```
+
+`inline` 的含义是"把这个值原样写进工具类"，而不是"复制一份常量"。于是 `bg-bg` 编译成 `background-color: var(--bg)`，`data-theme` 一变，所有用到它的地方同时变——**一行 JS 都不用写**。
+
+<Callout type="decision" title="为什么不用 class 切换">
+`class="dark"` 需要 `dark:` 前缀铺满全站，改色板要改所有组件。变量方案只需要改一处定义，组件里永远是 `bg-surface`、`text-muted` 这类语义名。
+</Callout>
+
+<Callout type="unverified" title="待验证">
+`@theme inline` 在同时使用 `@utility` 自定义工具类时的解析顺序，我没有完整测过。目前项目里的自定义类都是纯 CSS，没依赖 Tailwind 变量。
+</Callout>
+
+## 顺带的两个坑
+
+1. **`baseUrl` 在 TS 6 里已废弃**，写了会直接报 TS5101。路径别名只写 `paths` 即可，Vite 侧用 `resolve.alias` 对齐。
+2. **`framer-motion` 和 `motion` 不要同时装**。`motion/react` 本身已经依赖前者，多装一个只是让 lockfile 更重。
+
+## 现在这套配置的约束
+
+- 字阶、间距、圆角、动效时长全部在 `@theme` 里，组件里不许出现魔法数字；
+- 颜色只用语义名（`bg` / `surface` / `line` / `fg` / `muted`），不许出现 `indigo-500` 这类色板名；
+- 深浅两套主题共用同一批变量，新增颜色必须两套都补。

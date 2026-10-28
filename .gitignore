@@ -1,0 +1,33 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+dist-ssr-smoke
+*.local
+*.tsbuildinfo
+
+# 依赖缓存与编辑器本地设置：只影响本机，提交上去会让仓库凭空多出几十 MB
+.npm-cache
+.claude/settings.local.json
+
+# 工作区笔记（本地记忆），不属于项目源码
+.workbuddy/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

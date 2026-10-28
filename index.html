@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>学习外脑 · 技术笔记与项目复盘</title>
+    <meta
+      name="description"
+      content="一个把技术笔记和项目复盘长期沉淀下来的个人外脑：关注代码可读性与可维护性，也用界面细节证明工程审美。"
+    />
+    <meta name="color-scheme" content="dark light" />
+    <!-- %BASE_URL% 由 Vite 按 base 替换：部署在子路径时 favicon 才不会 404 -->
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
+    <!-- 在首屏绘制前定好主题，避免深浅色闪烁 -->
+    <script>
+      ;(() => {
+        try {
+          const stored = localStorage.getItem('theme')
+          const system = window.matchMedia('(prefers-color-scheme: light)').matches
+            ? 'light'
+            : 'dark'
+          document.documentElement.dataset.theme =
+            stored === 'light' || stored === 'dark' ? stored : system
+        } catch {
+          /* localStorage 不可用时退回默认深色 */
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
