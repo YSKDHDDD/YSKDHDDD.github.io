@@ -2,15 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { Command, Moon, Sun } from 'lucide-react'
 import { useTheme } from '@/lib/theme'
+import { navLinks } from '@/lib/nav'
 import { cn } from '@/lib/utils'
-
-const links = [
-  { to: '/notes', label: '笔记' },
-  { to: '/retro', label: '复盘' },
-  { to: '/craft', label: '工艺' },
-  { to: '/me', label: '我' },
-  { to: '/about', label: '关于' },
-]
 
 export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
   const { theme, toggle } = useTheme()
@@ -47,7 +40,7 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
         </Link>
 
         <nav aria-label="主导航" className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-          {links.map((link) => (
+          {navLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}

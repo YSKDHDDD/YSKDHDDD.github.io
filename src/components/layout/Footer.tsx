@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { notes, retros } from '@/lib/content'
+import { navLinks } from '@/lib/nav'
 
 // 构建期常量（vite define 注入）：浏览器运行时不重新求值，避免与预渲染结果不一致
 const buildDate = __BUILD_DATE__
@@ -24,21 +25,16 @@ export function Footer() {
         </div>
 
         <nav aria-label="页脚导航" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-meta">
-          <Link to="/me" className="text-muted transition-colors hover:text-fg">
-            我
-          </Link>
-          <Link to="/notes" className="text-muted transition-colors hover:text-fg">
-            笔记
-          </Link>
-          <Link to="/retro" className="text-muted transition-colors hover:text-fg">
-            复盘
-          </Link>
-          <Link to="/craft" className="text-muted transition-colors hover:text-fg">
-            工艺
-          </Link>
-          <Link to="/about" className="text-muted transition-colors hover:text-fg">
-            关于
-          </Link>
+          {/* 顺序来自 navLinks，和顶栏是同一份，别再在这里手写一遍 */}
+          {navLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className="text-muted transition-colors hover:text-fg"
+            >
+              {link.label}
+            </Link>
+          ))}
           <a href={`${BASE}rss.xml`} className="text-faint transition-colors hover:text-fg">
             RSS
           </a>
