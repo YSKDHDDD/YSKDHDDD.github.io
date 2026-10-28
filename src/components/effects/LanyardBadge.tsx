@@ -28,10 +28,23 @@ export interface LanyardBadgeProps {
   role: string
   /** 底部编号，像真工牌那样 */
   serial?: string
+  /**
+   * 证件照。给了照片就换成「照片 + 姓名条」的排法：
+   * 照片占掉中间那块，卡面字号和条码跟着收，字数最多的那句话让位。
+   */
+  photo?: string
+  photoAlt?: string
   className?: string
 }
 
-export default function LanyardBadge({ handle, role, serial = 'ME · 001', className }: LanyardBadgeProps) {
+export default function LanyardBadge({
+  handle,
+  role,
+  serial = 'ME · 001',
+  photo,
+  photoAlt = '工牌上的证件照',
+  className,
+}: LanyardBadgeProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -325,17 +338,29 @@ export default function LanyardBadge({ handle, role, serial = 'ME · 001', class
   return (
     <div ref={wrapRef} className={cn('lanyard', className)}>
       <canvas ref={canvasRef} className="lanyard__strap" aria-hidden />
-      <div ref={cardRef} className="lanyard__card">
-        <span className="lanyard__mark" aria-hidden>
-          学
-        </span>
+      <div ref={cardRef} className="lanyard__card" data-photo={photo ? '' : undefined}>
         <p className="lanyard__brand">
           <span className="lanyard__dot" aria-hidden />
           学习外脑
         </p>
+
+        {photo ? (
+          /*
+           * 照片用 <img> 而不是 background-image：它是卡上的内容，该被读屏读到、
+           * 该在预渲染的 HTML 里就有 src，也该跟着 base 路径走。
+           */
+          <figure className="lanyard__photo">
+            <img src={photo} alt={photoAlt} draggable={false} decoding="async" />
+          </figure>
+        ) : (
+          <span className="lanyard__mark" aria-hidden>
+            学
+          </span>
+        )}
+
         <p className="lanyard__handle">{handle}</p>
         <p className="lanyard__role">{role}</p>
-        <p className="lanyard__quote">写能读懂的代码，做摸得到的界面。</p>
+        {!photo && <p className="lanyard__quote">写能读懂的代码，做摸得到的界面。</p>}
         <span className="lanyard__barcode" aria-hidden />
         <p className="lanyard__foot">
           <span>{serial}</span>

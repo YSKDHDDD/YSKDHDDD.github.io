@@ -164,6 +164,69 @@
   color: var(--muted);
 }
 
+/* ---------- 有照片时的排法：照片 + 姓名条 ---------- */
+
+/*
+ * 照片是这张卡的弹性块：flex:1 吃掉剩余高度，文字区永远按内容占位。
+ * 反过来（照片定高、文字区溢出）一旦台词换长就会被裁掉，而卡高是随容器算的，
+ * 每个断点还不一样 —— 让它自己缩，比在三个断点各调一遍数字靠谱。
+ * 高度不足时缩的是照片的裁切范围，不是文字。
+ */
+.lanyard__photo {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 4.5em;
+  margin: 0.85em 0 0;
+  border-radius: 3px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--fg) 10%, transparent);
+}
+
+.lanyard__photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* 裁的该是下巴以下的衣领，不是头顶 */
+  object-fit: cover;
+  object-position: 50% 16%;
+  /* 拖动时别让浏览器另起一个原生图片拖影 */
+  -webkit-user-drag: none;
+}
+
+/* 卡纸压过一层的感觉：内描边 + 底部一点点暗角，照片才不像贴上去的图 */
+.lanyard__photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.12),
+    inset 0 -1.2em 1.8em -1.4em rgb(0 0 0 / 0.5);
+}
+
+.lanyard__card[data-photo] .lanyard__handle {
+  margin-top: 0.9em;
+  font-size: 1.45em;
+}
+
+.lanyard__card[data-photo] .lanyard__role {
+  margin-top: 0.3em;
+  font-size: 0.62em;
+}
+
+/* 条码收窄压短：照片已经占了视觉重心，它只需要还是条码 */
+.lanyard__card[data-photo] .lanyard__barcode {
+  width: 58%;
+  height: 1.4em;
+  margin-top: 0.8em;
+}
+
+.lanyard__card[data-photo] .lanyard__foot {
+  margin-top: 0.5em;
+  padding-top: 0.55em;
+}
+
 /* 条码那一块单独成段：上面留白是「信息区结束」，不是没排满 */
 .lanyard__barcode {
   margin-top: auto;

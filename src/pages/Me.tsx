@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowRight, ArrowUpRight, Layers, Mail, PenLine, User } from 'lucide-react'
+import badgePortrait from '@/assets/badge-portrait.webp'
 import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
 import DecryptedText from '@/components/effects/DecryptedText'
 import Dock, { type DockItemData } from '@/components/effects/Dock'
@@ -182,6 +183,7 @@ export default function Me() {
           <LanyardBadge
             handle={SITE.github.split('/').pop() ?? 'ME'}
             role="前端 · TypeScript · 构建管线"
+            photo={badgePortrait}
           />
         </div>
 
