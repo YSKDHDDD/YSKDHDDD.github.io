@@ -117,6 +117,22 @@ export function resolveMeta(pathname: string): PageMeta {
   })
 }
 
+/**
+ * 分享卡。
+ *
+ * 全站共用一张：文章页各出一张会把构建产物撑出 N 张位图，而这张卡要说的是
+ * 「谁在写、写什么」，不随单篇文章变化。
+ *
+ * 静态资源不能走 absoluteUrl —— 那个函数按页面 URL 的规矩补尾斜杠，拼出来会是
+ * /og.png/。这里直接拿 SITE.url（CI 注入的 base_url 已含子路径）。
+ */
+const OG_IMAGE = {
+  url: `${SITE.url}/og.png`,
+  width: '1200',
+  height: '630',
+  alt: '学习外脑 —— 写能读懂的代码，做摸得到的界面。',
+}
+
 /** 序列化成 <head> 里的标签，构建期直接塞进模板 */
 export function headTags(meta: PageMeta): string {
   const escape = (value: string) =>
@@ -136,9 +152,16 @@ export function headTags(meta: PageMeta): string {
     `<meta property="og:title" content="${escape(meta.title)}" />`,
     `<meta property="og:description" content="${escape(meta.description)}" />`,
     `<meta property="og:url" content="${escape(meta.canonical)}" />`,
-    `<meta name="twitter:card" content="summary" />`,
+    `<meta property="og:image" content="${escape(OG_IMAGE.url)}" />`,
+    `<meta property="og:image:width" content="${OG_IMAGE.width}" />`,
+    `<meta property="og:image:height" content="${OG_IMAGE.height}" />`,
+    `<meta property="og:image:alt" content="${escape(OG_IMAGE.alt)}" />`,
+    // summary_large_image 必须配一张图，否则卡片会退回成一行小字链接
+    `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${escape(meta.title)}" />`,
     `<meta name="twitter:description" content="${escape(meta.description)}" />`,
+    `<meta name="twitter:image" content="${escape(OG_IMAGE.url)}" />`,
+    `<meta name="twitter:image:alt" content="${escape(OG_IMAGE.alt)}" />`,
   ]
 
   if (meta.type === 'article') {
