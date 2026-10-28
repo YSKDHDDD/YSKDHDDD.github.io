@@ -16,6 +16,13 @@ export const SITE = {
   url: (rawUrl ?? 'http://localhost:5173').replace(/\/+$/, ''),
   locale: 'zh-CN',
   author: '本站作者',
+  /**
+   * 唯一的对外联系方式。
+   *
+   * About 和 /me 都要链它，各写一份就会分叉 —— About 上曾经还留着 github.com 首页
+   * 和 hello@example.com 两个没人收信的地址。
+   */
+  github: 'https://github.com/YSKDHDDD',
   /** 预渲染时用它判断要不要在 stderr 提示「还没配置真实域名」 */
   isConfigured: Boolean(rawUrl),
 } as const

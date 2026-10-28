@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight } from 'lucide-react'
+import { SITE } from '@/lib/site'
 
 const strengths = [
   {
@@ -79,23 +80,21 @@ export default function About() {
 
           <section aria-label="怎么联系我">
             <h2 className="text-label tracking-[0.06em] text-faint">怎么联系我</h2>
-            <ul className="mt-3 space-y-1.5 font-mono text-meta">
-              <li>
-                <a href="mailto:hello@example.com" className="text-muted transition-colors hover:text-fg">
-                  hello@example.com
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-muted transition-colors hover:text-fg"
-                >
-                  github.com
-                </a>
-              </li>
-            </ul>
+            <p className="mt-3 max-w-[56ch] text-meta text-muted">
+              这个站没有评论框，也没有表单。找我最直接的方式是 GitHub。
+            </p>
+            <a
+              href={SITE.github}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="group mt-4 inline-flex items-center gap-1.5 font-mono text-meta text-fg transition-colors hover:text-brand"
+            >
+              github.com/YSKDHDDD
+              <ArrowUpRight
+                className="h-3 w-3 transition-transform duration-[var(--motion-fast)] group-hover:-translate-y-0.5"
+                aria-hidden
+              />
+            </a>
           </section>
         </div>
 

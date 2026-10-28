@@ -11,12 +11,12 @@ import TiltCard from '@/components/effects/TiltCard'
 import { NoteRow } from '@/components/notes/NoteRow'
 import { Button } from '@/components/ui/Button'
 import { formatDate, notes, retros } from '@/lib/content'
+import { SITE } from '@/lib/site'
 import { useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 import './Me.css'
 
 const BASE = import.meta.env.BASE_URL
-const GITHUB = 'https://github.com/YSKDHDDD'
 
 /**
  * 三件不让步的事。
@@ -318,7 +318,7 @@ export default function Me() {
 
           <div className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-4">
             <MagneticButton
-              onClick={() => window.open(GITHUB, '_blank', 'noopener,noreferrer')}
+              onClick={() => window.open(SITE.github, '_blank', 'noopener,noreferrer')}
             >
               在 GitHub 上找我
             </MagneticButton>
