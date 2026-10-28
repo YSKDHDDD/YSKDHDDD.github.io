@@ -20,6 +20,7 @@ import { SITE } from '@/lib/site'
 export function getStaticPaths(): { path: string; priority: number; changefreq: string }[] {
   return [
     { path: '/', priority: 1.0, changefreq: 'weekly' },
+    { path: '/me', priority: 0.9, changefreq: 'monthly' },
     { path: '/notes', priority: 0.9, changefreq: 'weekly' },
     { path: '/retro', priority: 0.8, changefreq: 'weekly' },
     ...notes.map((note) => ({ path: `/notes/${note.slug}`, priority: 0.7, changefreq: 'monthly' })),

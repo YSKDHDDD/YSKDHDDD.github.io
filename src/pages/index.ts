@@ -11,6 +11,7 @@ import { lazy } from 'react'
  * 所以 App.tsx 只有一份，不需要为两种渲染方式各维护一套路由。
  */
 export const Home = lazy(() => import('./Home'))
+export const Me = lazy(() => import('./Me'))
 export const Notes = lazy(() => import('./Notes'))
 export const NoteDetail = lazy(() => import('./NoteDetail'))
 export const Retro = lazy(() => import('./Retro'))
@@ -28,6 +29,7 @@ export const NotFound = lazy(() => import('./NotFound'))
  */
 const routeLoaders: Record<string, () => Promise<unknown>> = {
   '/': () => import('./Home'),
+  '/me': () => import('./Me'),
   '/notes': () => import('./Notes'),
   '/notes/:slug': () => import('./NoteDetail'),
   '/retro': () => import('./Retro'),

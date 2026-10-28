@@ -5,6 +5,7 @@ import { useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 
 const links = [
+  { to: '/me', label: '我' },
   { to: '/notes', label: '笔记' },
   { to: '/retro', label: '复盘' },
   { to: '/craft', label: '工艺' },
@@ -45,14 +46,16 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
           </span>
         </Link>
 
-        <nav aria-label="主导航" className="flex items-center gap-1">
+        <nav aria-label="主导航" className="flex shrink-0 items-center gap-0.5 sm:gap-1">
           {links.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
                 cn(
-                  'relative px-2.5 py-1.5 text-meta transition-colors duration-[var(--motion-fast)]',
+                  // whitespace-nowrap 必须有：五项目录挤在 390px 里时，
+                  // flex 会按字数压缩宽度，把「笔记」拆成一字一行。
+                  'relative shrink-0 px-2 py-1.5 text-meta whitespace-nowrap transition-colors duration-[var(--motion-fast)] sm:px-2.5',
                   link.to === '/about' && 'hidden md:inline-block',
                   isActive ? 'text-fg' : 'text-muted hover:text-fg',
                 )

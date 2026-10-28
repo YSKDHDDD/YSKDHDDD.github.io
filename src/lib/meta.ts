@@ -83,6 +83,15 @@ export function resolveMeta(pathname: string): PageMeta {
     }
   }
 
+  if (segments[0] === 'me') {
+    return base('/me', {
+      title: `我 · ${SITE.name}`,
+      description:
+        '一条观看路径：从氛围、结构、文本，到触感与 1.5px 的细节。八段滚动叙事，每段只放一个效果，一屏只跑一个。',
+      type: 'website',
+    })
+  }
+
   if (segments[0] === 'craft') {
     return base('/craft', {
       title: `工艺 · ${SITE.name}`,

@@ -24,6 +24,9 @@ export function Footer() {
         </div>
 
         <nav aria-label="页脚导航" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-meta">
+          <Link to="/me" className="text-muted transition-colors hover:text-fg">
+            我
+          </Link>
           <Link to="/notes" className="text-muted transition-colors hover:text-fg">
             笔记
           </Link>

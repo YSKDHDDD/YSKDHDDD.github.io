@@ -1,7 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { SiteLayout } from '@/components/layout/SiteLayout'
 import { ThemeProvider, useThemeState } from '@/lib/theme'
-import { About, Craft, Home, NoteDetail, NotFound, Notes, Retro, RetroDetail } from '@/pages'
+import { About, Craft, Home, Me, NoteDetail, NotFound, Notes, Retro, RetroDetail } from '@/pages'
 
 /**
  * 页面从 '@/pages' 取，而不是在这里逐个 lazy()：
@@ -15,6 +15,7 @@ export default function App() {
       <Routes>
         <Route element={<SiteLayout />}>
           <Route index element={<Home />} />
+          <Route path="me" element={<Me />} />
           <Route path="notes" element={<Notes />} />
           <Route path="notes/:slug" element={<NoteDetail />} />
           <Route path="retro" element={<Retro />} />

@@ -178,15 +178,26 @@ export default function Home() {
             <SectionHeading
               index="04"
               title="工艺"
-              hint="每个效果都标注了「用了什么、为什么这么做」"
+              hint="八个效果，一份滚动叙事；每个都标注了用了什么、为什么留"
               action={
-                <Link
-                  to="/craft"
-                  className="group inline-flex items-center gap-1 text-muted transition-colors hover:text-fg"
-                >
-                  进入工艺页
-                  <ArrowRight className="h-3 w-3 transition-transform duration-[var(--motion-fast)] group-hover:translate-x-0.5" aria-hidden />
-                </Link>
+                <div className="flex items-center gap-4">
+                  <Link
+                    to="/me"
+                    className="group inline-flex items-center gap-1 text-fg transition-colors hover:text-brand"
+                  >
+                    滚动叙事
+                    <ArrowRight
+                      className="h-3 w-3 transition-transform duration-[var(--motion-fast)] group-hover:translate-x-0.5"
+                      aria-hidden
+                    />
+                  </Link>
+                  <Link
+                    to="/craft"
+                    className="text-muted transition-colors hover:text-fg"
+                  >
+                    技术说明
+                  </Link>
+                </div>
               }
             />
           </Reveal>
