@@ -2,7 +2,7 @@
  * /me —— 个人主页的少量定制样式。
  *
  * 布局几乎全部交给工具类，这里只放工具类表达不了的四件事：
- * 首屏的兜底光、收尾的辉光、悬浮 Dock 的容器、滚动提示的呼吸。
+ * 首屏的兜底光、收尾的辉光、常驻 Dock 的容器、滚动提示的呼吸。
  */
 
 .me {
@@ -52,40 +52,37 @@
   background: radial-gradient(120% 82% at 50% 104%, var(--brand-soft), transparent 66%);
 }
 
-/* ---------- 悬浮 Dock ---------- */
+/* ---------- 常驻 Dock ---------- */
 
 /**
  * Dock 的隐喻是「贴着屏幕边缘的应用切换」。放成 fixed 才成立 ——
- * 塞进一个卡片里，它就退回成展品。只在桌面出现：390px 宽度下它只会压住正文。
+ * 塞进一个卡片里，它就退回成展品。
+ *
+ * 位置固定，出场只有一次：挂载后从底边升上来，之后不再因为滚动而显隐。
+ * 之前按滚动位置淡入淡出，看着像「提示条」；常驻之后它才真的是一条导航。
+ * 底部留出 safe-area：iPhone 的横条正好压在 Dock 下沿的位置上。
  */
 .me-dock {
   position: fixed;
   inset-inline: 0;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
   z-index: 35;
-  display: none;
-  opacity: 0;
-  translate: 0 14px;
-  pointer-events: none;
-  transition:
-    opacity var(--motion-base) var(--motion-ease-soft),
-    translate var(--motion-base) var(--motion-ease-soft);
+  animation: me-dock-rise 560ms var(--motion-ease-soft) 200ms both;
 }
 
-@media (min-width: 768px) {
-  .me-dock {
-    display: block;
+@keyframes me-dock-rise {
+  from {
+    opacity: 0;
+    translate: 0 18px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
   }
 }
 
-.me-dock.is-on {
-  opacity: 1;
-  translate: 0 0;
-  pointer-events: auto;
-}
-
 /**
- * 悬浮条会盖住正文最后一行。与其让它硬压着字，不如在底下铺一层底噪渐变，
+ * 常驻面板会盖住正文。与其让它硬压着字，不如在底下铺一层底噪渐变，
  * 让文字在贴近底边时自然淡出 —— 视觉上变成"页面有自己的下边界"，
  * 而不是"有个东西挡在字上面"。
  */
@@ -97,13 +94,7 @@
   z-index: -1;
   height: 104px;
   pointer-events: none;
-  opacity: 0;
   background: linear-gradient(to top, var(--bg) 18%, transparent);
-  transition: opacity var(--motion-base) var(--motion-ease-soft);
-}
-
-.me-dock.is-on::after {
-  opacity: 1;
 }
 
 /* ---------- 降级 ---------- */
@@ -115,7 +106,7 @@
   }
 
   .me-dock {
-    transition: none;
+    animation: none;
     translate: 0 0;
   }
 }

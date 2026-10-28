@@ -102,28 +102,6 @@ const sectionLinks = [
 export default function Me() {
   const { theme } = useTheme()
   const [heroRef, heroMounted] = useNearViewport<HTMLElement>(0, 0)
-  const [dockOn, setDockOn] = useState(false)
-
-  /**
-   * Dock 是这一页的段落导航，不是常驻装饰：进正文才浮出来，快到底就退场，
-   * 免得压住结尾区。阈值用首屏高度算，换视口大小不用重记数字。
-   */
-  useEffect(() => {
-    const onScroll = () => {
-      const heroHeight = heroRef.current?.offsetHeight ?? window.innerHeight
-      const doc = document.documentElement
-      const nearEnd = window.scrollY + window.innerHeight > doc.scrollHeight - 620
-      setDockOn(window.scrollY > heroHeight * 0.72 && !nearEnd)
-    }
-
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
-    }
-  }, [heroRef])
 
   const jump = (id: string) => {
     const el = document.getElementById(id)
@@ -195,7 +173,11 @@ export default function Me() {
           </p>
         </div>
 
-        <div className="me-hint absolute inset-x-0 bottom-6 flex justify-center">
+        {/*
+          滚动提示抬到 Dock 之上：Dock 现在常驻底部，原来 24px 的位置会被它盖住。
+          留出的高度按 Dock 的厚度（68px）加底边距算，正好卡在面板上沿外面。
+        */}
+        <div className="me-hint absolute inset-x-0 bottom-24 flex justify-center">
           <ArrowDown className="me-hint__icon h-4 w-4 text-faint" aria-hidden />
         </div>
       </section>
@@ -325,7 +307,11 @@ export default function Me() {
         */}
         <div aria-hidden className="me-endglow" />
 
-        <div className="page-shell relative py-24 sm:py-28">
+        {/*
+          底部比顶部多留一截：Dock 常驻在视口底部，最后一行字要能从它下面走出来，
+          而不是一滚到底就停在面板后面。
+        */}
+        <div className="page-shell relative pt-24 pb-32 sm:pt-28 sm:pb-36">
           <p className="font-mono text-label tracking-[0.14em] text-faint">CONTACT</p>
           <h2 className="mt-3 max-w-[18em] text-h2 leading-[1.25] font-medium tracking-[-0.011em] text-fg">
             想聊，或者只是想看看我在写什么。
@@ -354,8 +340,11 @@ export default function Me() {
         </div>
       </section>
 
-      {/* Dock：只在这一页出现，只干段落导航这一件事 */}
-      <div className={cn('me-dock', dockOn && 'is-on')}>
+      {/*
+        Dock 常驻在视口底部，不随滚动出现或退场：它的隐喻就是「贴着屏幕边缘」，
+        一有显隐条件，它就从导航退化成装饰。
+      */}
+      <div className="me-dock">
         <Dock
           items={dockItems}
           position="bottom"
@@ -364,7 +353,7 @@ export default function Me() {
           magnification={58}
           gap={6}
           roundness={1}
-          showLabels={false}
+          showLabels
         />
       </div>
     </div>
