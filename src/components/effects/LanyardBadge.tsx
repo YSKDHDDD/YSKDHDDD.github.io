@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { cn } from '@/lib/utils'
+import { Lanyard } from './lanyardPhysics'
 import './LanyardBadge.css'
 
 /**
@@ -11,25 +12,15 @@ import './LanyardBadge.css'
  * 的预算对不上。这里换成 Verlet 绳 + CSS 3D：
  *   - 绳子用 canvas 画成带子，物理是真的（重力、约束、阻尼），手感不假；
  *   - 卡片是 DOM，文字是真字，可选中、可读屏、跟着主题走；
- *   - 3D 只用一个 rotateY，倾斜量来自末端横向速度，够用且每帧只写一次 transform。
+ *   - 3D 只用一个 rotateY，倾斜量来自横向速度，够用且每帧只写一次 transform。
  *
- * 尺寸全部按容器算，换视口不用改数字。
+ * 物理在 ./lanyardPhysics.ts 里，不碰 DOM：那边能单独在 Node 里逐帧跑，
+ * 手感是靠秒数、像素、角度这些数字调出来的，不是靠看一眼截图。
+ * 这个文件只做三件事 —— 画带子、写 transform、把指针事件翻成「手心」。
  */
 
-/** 绳子的分段数：14 段够顺，再多就是白给约束求解加迭代 */
-const SEGMENTS = 14
-/** 重力，写成「每秒位移多少倍容器高度」，换尺寸手感不跟着变 */
-const GRAVITY = 3.2
-const DAMPING = 0.99
-const CONSTRAINT_PASSES = 8
+/** 固定步长：物理按 60Hz 推进，与显示器刷新率解耦，120Hz 屏上手感不会变快 */
 const FIXED_STEP = 1 / 60
-
-interface Point {
-  x: number
-  y: number
-  px: number
-  py: number
-}
 
 export interface LanyardBadgeProps {
   /** 工牌上的大字 */
@@ -39,8 +30,6 @@ export interface LanyardBadgeProps {
   serial?: string
   className?: string
 }
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
 export default function LanyardBadge({ handle, role, serial = 'ME · 001', className }: LanyardBadgeProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -56,27 +45,15 @@ export default function LanyardBadge({ handle, role, serial = 'ME · 001', class
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // ---- 几何：全部跟着容器尺寸重算 ----
-    let width = 0
-    let height = 0
-    let cardW = 0
-    let cardH = 0
-    let restTop = 0
-    let anchorY = 0
-    let ropeLen = 0
-    let strapWidth = 12
+    const solver = new Lanyard()
     let dpr = 1
     let brand = '#8b8cf7'
     let brandKey = ''
 
-    const points: Point[] = Array.from({ length: SEGMENTS + 1 }, () => ({ x: 0, y: 0, px: 0, py: 0 }))
-
-    let drag: { x: number; y: number } | null = null
-    let angle = 0
-    let tilt = 0
     let raf = 0
     let lastTime = 0
     let accumulator = 0
+    let pointerId: number | null = null
 
     const readBrand = () => {
       const key = document.documentElement.dataset.theme ?? 'default'
@@ -87,22 +64,27 @@ export default function LanyardBadge({ handle, role, serial = 'ME · 001', class
     }
 
     const applyCard = () => {
-      const end = points[SEGMENTS]
-      const dx = end.x - width / 2
-      const dy = end.y - restTop
-      card.style.transform = `translate3d(${dx.toFixed(2)}px, ${dy.toFixed(2)}px, 0) rotate(${angle.toFixed(4)}rad) rotateY(${tilt.toFixed(2)}deg)`
+      const o = solver.offset()
+      card.style.transform =
+        `translate3d(${o.x.toFixed(2)}px, ${o.y.toFixed(2)}px, 0)` +
+        ` rotate(${solver.swing.toFixed(4)}rad) rotateY(${solver.tilt.toFixed(2)}deg)`
     }
 
     const paint = () => {
+      const g = solver.geometry
+      const { points } = solver
+      const n = points.length - 1
+      const { width, height, strapWidth } = g
+
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, width, height)
 
       // 带子的两条边：沿每段的法线偏移半个带宽
       const left: Array<[number, number]> = []
       const right: Array<[number, number]> = []
-      for (let i = 0; i <= SEGMENTS; i += 1) {
+      for (let i = 0; i <= n; i += 1) {
         const a = points[Math.max(0, i - 1)]
-        const b = points[Math.min(SEGMENTS, i + 1)]
+        const b = points[Math.min(n, i + 1)]
         const tx = b.x - a.x
         const ty = b.y - a.y
         const len = Math.hypot(tx, ty) || 1
@@ -172,10 +154,10 @@ export default function LanyardBadge({ handle, role, serial = 'ME · 001', class
       ctx.restore()
 
       // 卡片顶上的金属扣：整块画在卡片上沿之上，别被卡片盖住
-      const end = points[SEGMENTS]
+      const end = points[n]
       ctx.save()
       ctx.translate(end.x, end.y)
-      ctx.rotate(angle)
+      ctx.rotate(solver.swing)
       const clipW = strapWidth * 1.2
       const clipH = strapWidth * 1.6
       const radius = Math.min(3, clipW / 3)
@@ -200,110 +182,75 @@ export default function LanyardBadge({ handle, role, serial = 'ME · 001', class
       ctx.globalCompositeOperation = 'source-over'
     }
 
-    const seed = () => {
-      for (let i = 0; i <= SEGMENTS; i += 1) {
-        const y = anchorY + (ropeLen * i) / SEGMENTS
-        points[i].x = width / 2
-        points[i].y = y
-        points[i].px = width / 2
-        points[i].py = y
+    // ---- 拖拽：把客户端坐标翻成容器内坐标，其余交给 solver ----
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (pointerId === null || event.pointerId !== pointerId) return
+      const rect = wrap.getBoundingClientRect()
+      solver.moveHand(event.clientX - rect.left, event.clientY - rect.top)
+    }
+
+    const onPointerUp = (event: PointerEvent) => {
+      if (pointerId === null || event.pointerId !== pointerId) return
+      solver.endDrag()
+      delete card.dataset.dragging
+      stopListening()
+      start()
+    }
+
+    const stopListening = () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('pointercancel', onPointerUp)
+      pointerId = null
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (reduced || event.button !== 0) return
+      event.preventDefault()
+      const rect = wrap.getBoundingClientRect()
+      solver.beginDrag(event.clientX - rect.left, event.clientY - rect.top)
+      pointerId = event.pointerId
+      card.dataset.dragging = 'true'
+      card.dataset.touched = 'true'
+      try {
+        // 抓住指针，鼠标甩出窗口也不会把事件丢掉
+        card.setPointerCapture(event.pointerId)
+      } catch {
+        /* 合成事件里没有真实指针，抓不到也不影响拖拽 */
       }
-      angle = 0
-      tilt = 0
-      drag = null
+      // 监听挂在 window 上：捕获失败（自动化 / 旧浏览器）时仍然能收到
+      window.addEventListener('pointermove', onPointerMove)
+      window.addEventListener('pointerup', onPointerUp)
+      window.addEventListener('pointercancel', onPointerUp)
+      start()
     }
 
     const layout = () => {
       const rect = wrap.getBoundingClientRect()
-      width = rect.width
-      height = rect.height
       // display:none（窄屏）时没有尺寸：停掉循环，别拿 0 去跑物理
-      if (!width || !height) {
+      if (!rect.width || !rect.height) {
         stop()
         return
       }
 
+      const g = solver.geometry
+      solver.resize(rect.width, rect.height)
+
       dpr = Math.min(window.devicePixelRatio || 1, 2)
-      canvas.width = Math.round(width * dpr)
-      canvas.height = Math.round(height * dpr)
-      canvas.style.width = `${width}px`
-      canvas.style.height = `${height}px`
+      canvas.width = Math.round(g.width * dpr)
+      canvas.height = Math.round(g.height * dpr)
+      canvas.style.width = `${g.width}px`
+      canvas.style.height = `${g.height}px`
 
-      // 卡片宽同时受容器宽和高约束，否则窄屏上会顶出框
-      cardW = Math.round(Math.min(width * 0.72, height * 0.4))
-      // 1.55 接近真实工牌（54×86）的长宽比，1.36 会显得又矮又方
-      cardH = Math.round(cardW * 1.55)
-      restTop = Math.round(height * 0.22)
-      anchorY = -Math.round(height * 0.16)
-      ropeLen = restTop - anchorY
-      strapWidth = Math.max(9, Math.min(16, width * 0.05))
+      wrap.style.setProperty('--card-w', `${g.cardW}px`)
+      wrap.style.setProperty('--card-h', `${g.cardH}px`)
+      wrap.style.setProperty('--rest-top', `${g.restTop}px`)
 
-      wrap.style.setProperty('--card-w', `${cardW}px`)
-      wrap.style.setProperty('--card-h', `${cardH}px`)
-      wrap.style.setProperty('--rest-top', `${restTop}px`)
-
-      // 尺寸一变，旧坐标会把卡片甩到框外，直接回到静止位
-      seed()
       readBrand()
       paint()
       applyCard()
       if (!reduced) start()
-    }
-
-    const step = (dt: number) => {
-      const gravity = height * GRAVITY
-      const segment = ropeLen / SEGMENTS
-
-      for (let i = 1; i <= SEGMENTS; i += 1) {
-        const p = points[i]
-        const vx = (p.x - p.px) * DAMPING
-        const vy = (p.y - p.py) * DAMPING
-        p.px = p.x
-        p.py = p.y
-        p.x += vx
-        p.y += vy + gravity * dt * dt
-      }
-
-      points[0].x = width / 2
-      points[0].y = anchorY
-
-      if (drag) {
-        points[SEGMENTS].x = drag.x
-        points[SEGMENTS].y = drag.y
-      }
-
-      for (let pass = 0; pass < CONSTRAINT_PASSES; pass += 1) {
-        for (let i = 0; i < SEGMENTS; i += 1) {
-          const a = points[i]
-          const b = points[i + 1]
-          const dx = b.x - a.x
-          const dy = b.y - a.y
-          const dist = Math.hypot(dx, dy) || 1
-          const diff = (dist - segment) / dist
-          if (i === 0) {
-            b.x -= dx * diff
-            b.y -= dy * diff
-          } else {
-            a.x += dx * diff * 0.5
-            a.y += dy * diff * 0.5
-            b.x -= dx * diff * 0.5
-            b.y -= dy * diff * 0.5
-          }
-        }
-        if (drag) {
-          points[SEGMENTS].x = drag.x
-          points[SEGMENTS].y = drag.y
-        }
-      }
-
-      /*
-       * 末端限位：允许甩出容器两侧一点，但别让卡片整块压到正文上。
-       * 留 20% 卡宽的余量 —— 完全限制在框内的话，300px 的容器里只剩 ±38px 的活动范围，
-       * 拖起来像钉住了。
-       */
-      const end = points[SEGMENTS]
-      end.x = clamp(end.x, cardW * 0.2, width - cardW * 0.2)
-      end.y = clamp(end.y, restTop * 0.45, Math.max(restTop, height - cardH - 6))
     }
 
     const frame = (time: number) => {
@@ -314,21 +261,9 @@ export default function LanyardBadge({ handle, role, serial = 'ME · 001', class
 
       readBrand()
       while (accumulator >= FIXED_STEP) {
-        step(FIXED_STEP)
+        solver.step(FIXED_STEP)
         accumulator -= FIXED_STEP
       }
-
-      // 卡片角度跟着末端绳子的方向，但慢半拍 —— 这个「慢」就是重量感
-      const end = points[SEGMENTS]
-      const before = points[SEGMENTS - 1]
-      const target = clamp(Math.atan2(end.x - before.x, end.y - before.y), -1.1, 1.1)
-      const diff = Math.atan2(Math.sin(target - angle), Math.cos(target - angle))
-      angle += diff * 0.32
-
-      // 横向速度决定侧倾：甩得越快越接近侧脸
-      const vx = (end.x - end.px) * 60
-      const targetTilt = clamp(-vx / 12, -34, 34)
-      tilt += (targetTilt - tilt) * 0.22
 
       paint()
       applyCard()
@@ -338,19 +273,7 @@ export default function LanyardBadge({ handle, role, serial = 'ME · 001', class
        * 付全程帧预算。这也是这一页「一屏只留一个常驻动效」说法的另一半 ——
        * 极光在动，工牌就只是挂着。
        */
-      if (!drag && speed() < 0.06 && Math.abs(angle) < 0.004 && Math.abs(tilt) < 0.4) {
-        stop()
-      }
-    }
-
-    /** 整条绳子里最快的那一段，用来判断是否已经静止 */
-    const speed = () => {
-      let max = 0
-      for (let i = 1; i <= SEGMENTS; i += 1) {
-        const p = points[i]
-        max = Math.max(max, Math.abs(p.x - p.px), Math.abs(p.y - p.py))
-      }
-      return max
+      if (solver.isSettled()) stop()
     }
 
     const start = () => {
@@ -365,54 +288,17 @@ export default function LanyardBadge({ handle, role, serial = 'ME · 001', class
       raf = 0
     }
 
-    // ---- 拖拽：整张卡片都能抓，抓哪儿就从哪儿跟手 ----
-    let grab = { x: 0, y: 0 }
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (reduced) return
-      event.preventDefault()
-      try {
-        // 合成事件（自动化测试）里没有真实指针，capture 会抛；抓不到也不影响拖拽
-        card.setPointerCapture(event.pointerId)
-      } catch {
-        /* 忽略 */
-      }
-      const rect = wrap.getBoundingClientRect()
-      const end = points[SEGMENTS]
-      grab = {
-        x: end.x - (event.clientX - rect.left),
-        y: end.y - (event.clientY - rect.top),
-      }
-      drag = { x: end.x, y: end.y }
-      card.dataset.dragging = 'true'
-      card.dataset.touched = 'true'
-      start()
-    }
-
-    const onPointerMove = (event: PointerEvent) => {
-      if (!drag) return
-      const rect = wrap.getBoundingClientRect()
-      drag = {
-        x: event.clientX - rect.left + grab.x,
-        y: event.clientY - rect.top + grab.y,
-      }
-    }
-
-    const onPointerUp = () => {
-      if (!drag) return
-      drag = null
-      delete card.dataset.dragging
-
-      // 松手时把速度打七折：Verlet 会把最后一段位移当成速度，直接用容易甩飞
-      const end = points[SEGMENTS]
-      end.px = end.x - (end.x - end.px) * 0.7
-      end.py = end.y - (end.y - end.py) * 0.7
-    }
-
     card.addEventListener('pointerdown', onPointerDown)
-    card.addEventListener('pointermove', onPointerMove)
-    card.addEventListener('pointerup', onPointerUp)
-    card.addEventListener('pointercancel', onPointerUp)
+
+    /*
+     * 主题切换要重画带子。静止时循环是停掉的（见 frame 末尾），
+     * 不在这里补一次，切到浅色后带子会一直是深色主题的品牌色。
+     */
+    const themeWatch = new MutationObserver(() => {
+      readBrand()
+      paint()
+    })
+    themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 
     const observer = new ResizeObserver(layout)
     observer.observe(wrap)
@@ -428,12 +314,11 @@ export default function LanyardBadge({ handle, role, serial = 'ME · 001', class
 
     return () => {
       stop()
+      stopListening()
+      themeWatch.disconnect()
       observer.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
       card.removeEventListener('pointerdown', onPointerDown)
-      card.removeEventListener('pointermove', onPointerMove)
-      card.removeEventListener('pointerup', onPointerUp)
-      card.removeEventListener('pointercancel', onPointerUp)
     }
   }, [reduced])
 

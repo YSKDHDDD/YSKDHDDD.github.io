@@ -53,10 +53,33 @@
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+
+  /*
+   * 用独立的 scale 属性做「拿起来」，不碰 transform —— transform 每帧被 JS
+   * 整个覆盖，写在那儿会被冲掉。它比 transform 先应用，缩放中心仍是挂点（上沿中点），
+   * 所以卡片变大时金属扣不会跟着移位。
+   */
+  scale: 1;
+  transition:
+    scale 180ms var(--motion-ease-soft),
+    box-shadow 180ms var(--motion-ease-soft);
+}
+
+/* hover 只给鼠标：触屏上 :hover 会粘住 */
+@media (hover: hover) {
+  .lanyard__card:hover {
+    scale: 1.015;
+  }
 }
 
 .lanyard__card[data-dragging='true'] {
   cursor: grabbing;
+  scale: 1.028;
+  /* 拿起来离背景更远一点，阴影跟着散开 */
+  box-shadow:
+    0 34px 72px -30px rgb(0 0 0 / 0.62),
+    0 4px 14px -5px rgb(0 0 0 / 0.32),
+    inset 0 1px 0 rgb(255 255 255 / 0.09);
 }
 
 /* 左侧品牌竖条 */

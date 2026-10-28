@@ -115,7 +115,7 @@ ReactBits 的效果是**素材**，不是风格。如果每个区块都挂一个
 | 路由切换 | `View Transitions` | 导航反馈：让"换了一页"这件事有物理感 | 旧页 120ms 退、新页 220ms 进（不是 400ms —— 切页要利落）。chunk 未预热时**跳过过渡**而不是截到 Suspense 白屏；`prefers-reduced-motion` 下完全不启动 |
 | `/craft` | `Dock` / `ScrollExpand` / `GradientWaves` | 展品 | 默认**静帧**，hover / focus / 点击后才跑；每格标注"用了什么、为什么" |
 | `/craft` 交互展位 | `TiltCard` / `MagneticButton` / `GlowBorder` | 展品 | 前两个指针驱动、hover 才动；`GlowBorder` 是常驻的，但只在展位里跑。三者都不得出现在列表页或阅读页 |
-| `/me` 首屏 | `LanyardBadge` | 身份：工牌是可抓的，不是一行"你好，我是…" | 自带物理（Verlet 绳），**静止即停帧**；`md` 以下不挂载（首屏没位置，会被常驻 Dock 切半）；`prefers-reduced-motion` 下不启动循环 |
+| `/me` 首屏 | `LanyardBadge` | 身份：工牌是可抓的，不是一行"你好，我是…" | 物理在 `lanyardPhysics.ts`（可脱离 DOM 逐帧跑，`scripts/lanyard-feel.ts` 出数字）：牵引式拖拽、松手会甩、摆角是欠阻尼弹簧，**静止即停帧**；`md` 以下不挂载（首屏没位置，会被常驻 Dock 切半）；`prefers-reduced-motion` 下不启动循环 |
 | 404 | `GradientWaves` | 稀缺点位 | 全屏，一年见一次 |
 | 阅读页 | 无 | — | 只有进度条与 TOC 高亮 |
 
