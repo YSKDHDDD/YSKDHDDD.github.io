@@ -87,7 +87,7 @@ export function resolveMeta(pathname: string): PageMeta {
     return base('/me', {
       title: `我 · ${SITE.name}`,
       description:
-        '一条观看路径：从氛围、结构、文本，到触感与 1.5px 的细节。八段滚动叙事，每段只放一个效果，一屏只跑一个。',
+        '写能读懂的代码，做摸得到的界面。三件不让步的事：类型能被检查、能在构建期算完的不留给浏览器、克制也是设计。',
       type: 'website',
     })
   }

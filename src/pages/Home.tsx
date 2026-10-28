@@ -185,7 +185,7 @@ export default function Home() {
                     to="/me"
                     className="group inline-flex items-center gap-1 text-fg transition-colors hover:text-brand"
                   >
-                    滚动叙事
+                    个人主页
                     <ArrowRight
                       className="h-3 w-3 transition-transform duration-[var(--motion-fast)] group-hover:translate-x-0.5"
                       aria-hidden

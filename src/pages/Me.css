@@ -1,119 +1,32 @@
 /**
- * /me —— 滚动叙事页的布局。
+ * /me —— 个人主页的少量定制样式。
  *
- * 这一页刻意不给文字加入场动画：SSR 出来的就是最终状态，
- * 进来立刻可读，滚动只是切换「哪一段在说话」。动态全部来自效果本身，
- * 和 DESIGN_PLAN §4「效果必须承担功能」保持一致。
+ * 布局几乎全部交给工具类，这里只放工具类表达不了的四件事：
+ * 首屏的兜底光、收尾的辉光、悬浮 Dock 的容器、滚动提示的呼吸。
  */
 
-/* ---------- 段落 ---------- */
-
-.me-stage {
-  display: grid;
-  align-items: center;
-  min-height: 100svh;
-  padding-block: 5rem;
-  /* 进度条按锚点跳转时，段落顶部别顶到 sticky 导航底下 */
-  scroll-margin-top: 4.5rem;
+.me {
+  /* 展开图的起点宽度是百分比，窄屏下不要让它把 body 撑出横向滚动 */
+  overflow-x: clip;
 }
 
-.me-stage__grid {
-  display: grid;
-  gap: 2.5rem;
+/* ---------- 首屏 ---------- */
+
+/* WebGL 不可用时的兜底光。极光挂上后它被盖住，不参与动画。 */
+.me-hero__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(90% 58% at 50% -12%, var(--brand-soft), transparent 72%),
+    radial-gradient(
+      52% 38% at 82% 18%,
+      color-mix(in oklab, var(--brand) 14%, transparent),
+      transparent 72%
+    );
 }
 
-@media (min-width: 1024px) {
-  .me-stage__grid {
-    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-    gap: 4.5rem;
-    align-items: center;
-  }
-}
-
-/* 段落编号：不抢正文，只做一个视觉锚点 */
-.me-stage__index {
-  font-family: var(--font-mono);
-  font-size: clamp(3.5rem, 9vw, 7rem);
-  line-height: 0.8;
-  letter-spacing: -0.04em;
-  color: var(--line-strong);
-  user-select: none;
-}
-
-/* ---------- 展位 ---------- */
-
-/* 用 grid 而不是 height:100%：容器高度由 min-height 决定，
-   子元素的百分比高度在 auto 高度下不成立，会被内容撑成一条窄带。 */
-.me-demo {
-  position: relative;
-  display: grid;
-  place-items: stretch;
-  overflow: hidden;
-  min-height: clamp(16rem, 42vh, 28rem);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--bg-subtle);
-  isolation: isolate;
-}
-
-.me-demo--tall {
-  min-height: clamp(18rem, 52vh, 34rem);
-}
-
-/* ---------- 右侧进度 ---------- */
-
-.me-progress {
-  position: fixed;
-  top: 50%;
-  right: 1.5rem;
-  z-index: 30;
-  display: none;
-  translate: 0 -50%;
-}
-
-@media (min-width: 1280px) {
-  .me-progress {
-    display: flex;
-  }
-}
-
-.me-progress__list {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.75rem;
-}
-
-.me-progress__link {
-  display: block;
-  padding-block: 0.25rem;
-  cursor: pointer;
-}
-
-.me-progress__tick {
-  display: block;
-  width: 14px;
-  height: 1.5px;
-  border-radius: 1px;
-  background: var(--line-strong);
-  transition:
-    width var(--motion-base) var(--motion-ease-soft),
-    background-color var(--motion-base) var(--motion-ease-soft);
-}
-
-.me-progress__link:hover .me-progress__tick {
-  width: 20px;
-  background: var(--muted);
-}
-
-.me-progress__link[aria-current='true'] .me-progress__tick {
-  width: 30px;
-  background: var(--brand);
-}
-
-/* ---------- 首屏的滚动提示 ---------- */
-
-.me-hint {
+.me-hint__icon {
   animation: me-hint 2.6s var(--motion-ease-soft) infinite;
 }
 
@@ -129,25 +42,80 @@
   }
 }
 
-/* ---------- 降级 ---------- */
+/* ---------- 收尾的辉光 ---------- */
+
+/* 静态渐变，不参与动画：结尾只需要一点温度，不需要第二个常驻动效。 */
+.me-endglow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 82% at 50% 104%, var(--brand-soft), transparent 66%);
+}
+
+/* ---------- 悬浮 Dock ---------- */
 
 /**
- * 减少动效时，滚动叙事退化成一份普通的长列表：
- * 去掉整屏高度，段落之间用间距分隔，不再依赖滚动节奏。
- * 效果组件自身也会在 mount 后停在静态首帧。
+ * Dock 的隐喻是「贴着屏幕边缘的应用切换」。放成 fixed 才成立 ——
+ * 塞进一个卡片里，它就退回成展品。只在桌面出现：390px 宽度下它只会压住正文。
  */
-@media (prefers-reduced-motion: reduce) {
-  .me-stage {
-    min-height: 0;
-    padding-block: 4rem;
-  }
+.me-dock {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 35;
+  display: none;
+  opacity: 0;
+  translate: 0 14px;
+  pointer-events: none;
+  transition:
+    opacity var(--motion-base) var(--motion-ease-soft),
+    translate var(--motion-base) var(--motion-ease-soft);
+}
 
-  .me-hint {
+@media (min-width: 768px) {
+  .me-dock {
+    display: block;
+  }
+}
+
+.me-dock.is-on {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+
+/**
+ * 悬浮条会盖住正文最后一行。与其让它硬压着字，不如在底下铺一层底噪渐变，
+ * 让文字在贴近底边时自然淡出 —— 视觉上变成"页面有自己的下边界"，
+ * 而不是"有个东西挡在字上面"。
+ */
+.me-dock::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: -1;
+  height: 104px;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(to top, var(--bg) 18%, transparent);
+  transition: opacity var(--motion-base) var(--motion-ease-soft);
+}
+
+.me-dock.is-on::after {
+  opacity: 1;
+}
+
+/* ---------- 降级 ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .me-hint__icon {
     animation: none;
     opacity: 0.6;
   }
 
-  .me-progress {
-    display: none;
+  .me-dock {
+    transition: none;
+    translate: 0 0;
   }
 }

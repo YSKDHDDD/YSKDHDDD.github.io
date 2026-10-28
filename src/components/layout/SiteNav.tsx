@@ -5,10 +5,10 @@ import { useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 
 const links = [
-  { to: '/me', label: '我' },
   { to: '/notes', label: '笔记' },
   { to: '/retro', label: '复盘' },
   { to: '/craft', label: '工艺' },
+  { to: '/me', label: '我' },
   { to: '/about', label: '关于' },
 ]
 
