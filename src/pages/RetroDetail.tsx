@@ -5,7 +5,8 @@ import { mdxComponents } from '@/components/mdx/registry'
 import { ReadingProgress } from '@/components/notes/ReadingProgress'
 import { Toc } from '@/components/notes/Toc'
 import { Badge } from '@/components/ui/Badge'
-import { formatDate, getRetro, retroContent } from '@/lib/content'
+import { RelatedReading } from '@/components/notes/RelatedReading'
+import { formatDate, getRelatedEntries, getRetro, retroContent } from '@/lib/content'
 
 export default function RetroDetail() {
   const { slug = '' } = useParams()
@@ -25,6 +26,11 @@ export default function RetroDetail() {
   }
 
   const { meta, toc } = retro
+  const related = getRelatedEntries({
+    href: `/retro/${slug}`,
+    topic: meta.topic,
+    tags: meta.tags,
+  })
 
   return (
     <>
@@ -87,6 +93,8 @@ export default function RetroDetail() {
             </Suspense>
           </article>
         </div>
+
+        <RelatedReading items={related} currentTags={meta.tags} />
       </div>
     </>
   )

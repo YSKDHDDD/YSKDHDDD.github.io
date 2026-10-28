@@ -73,6 +73,34 @@ export function getNoteNeighbours(slug: string) {
   }
 }
 
+/**
+ * 相关阅读：共同标签数优先，同主题加权，最后按日期新→旧。
+ *
+ * 候选池是笔记 + 复盘 —— 只有 6 篇笔记时，单看同类只能凑出一两条；
+ * 复盘里恰好有 mdx / vite / tailwind 这些标签，跨类型反而接得上。
+ * 全程只做数值比较，不用 localeCompare（依赖运行时 ICU，Node 与浏览器
+ * 可能不一致，预渲染和注水就对不上）。零分的直接丢掉：为凑满而推荐一篇
+ * 无关的，比空着更糟。
+ */
+export function getRelatedEntries(
+  item: Pick<SearchItem, 'href' | 'topic' | 'tags'>,
+  limit = 3,
+): SearchItem[] {
+  const tags = new Set(item.tags)
+  return searchIndex
+    .filter((other) => other.href !== item.href)
+    .map((other) => ({
+      other,
+      score:
+        other.tags.filter((tag) => tags.has(tag)).length * 10 +
+        (other.topic === item.topic ? 4 : 0),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || (a.other.date < b.other.date ? 1 : -1))
+    .slice(0, limit)
+    .map((entry) => entry.other)
+}
+
 export const topicLabels: Record<TopicId, string> = {
   engineering: '工程',
   design: '设计',
@@ -111,6 +139,8 @@ export interface SearchItem {
   summary: string
   href: string
   group: '笔记' | '复盘'
+  date: string
+  topic: TopicId
   tags: string[]
 }
 
@@ -121,6 +151,8 @@ export const searchIndex: SearchItem[] = [
     summary: note.meta.summary,
     href: `/notes/${note.slug}`,
     group: '笔记' as const,
+    date: note.meta.date,
+    topic: note.meta.topic,
     tags: note.meta.tags,
   })),
   ...retros.map((retro) => ({
@@ -129,6 +161,8 @@ export const searchIndex: SearchItem[] = [
     summary: retro.meta.summary,
     href: `/retro/${retro.slug}`,
     group: '复盘' as const,
+    date: retro.meta.date,
+    topic: retro.meta.topic,
     tags: retro.meta.tags,
   })),
 ]

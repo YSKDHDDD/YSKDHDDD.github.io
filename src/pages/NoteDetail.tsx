@@ -7,11 +7,13 @@ import { Toc } from '@/components/notes/Toc'
 import { StatusDot } from '@/components/common/StatusDot'
 import { Badge } from '@/components/ui/Badge'
 import { TagChip } from '@/components/common/TagChip'
+import { RelatedReading } from '@/components/notes/RelatedReading'
 import {
   formatDate,
   getNote,
   noteContent,
   getNoteNeighbours,
+  getRelatedEntries,
   statusHints,
   topicLabels,
 } from '@/lib/content'
@@ -35,6 +37,11 @@ export default function NoteDetail() {
 
   const { meta, toc, readingTime } = note
   const { newer, older } = getNoteNeighbours(slug)
+  const related = getRelatedEntries({
+    href: `/notes/${slug}`,
+    topic: meta.topic,
+    tags: meta.tags,
+  })
 
   return (
     <>
@@ -64,7 +71,9 @@ export default function NoteDetail() {
 
           <div className="mt-5 flex flex-wrap gap-1.5">
             {meta.tags.map((tag) => (
-              <TagChip key={tag}>{tag}</TagChip>
+              <TagChip key={tag} to={`/notes?tag=${encodeURIComponent(tag)}`}>
+                {tag}
+              </TagChip>
             ))}
           </div>
         </header>
@@ -104,7 +113,9 @@ export default function NoteDetail() {
           </aside>
         </div>
 
-        <nav className="mt-16 grid gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-2">
+        <RelatedReading items={related} currentTags={meta.tags} />
+
+        <nav className="mt-10 grid gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-2">
           {older ? (
             <Link to={`/notes/${older.slug}`} className="group bg-bg p-4 transition-colors hover:bg-surface">
               <span className="flex items-center gap-1 text-label text-faint">

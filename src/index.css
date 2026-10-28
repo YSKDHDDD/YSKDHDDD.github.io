@@ -378,6 +378,55 @@
   box-shadow: inset 2px 0 0 var(--brand);
 }
 
+/* 复制按钮挂在 pre 的兄弟位置：pre 会横向滚动，塞进去会跟着滚走 */
+.code-block {
+  position: relative;
+}
+
+.code-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+  display: inline-flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background-color: var(--surface-2);
+  color: var(--faint);
+  opacity: 0;
+  transition:
+    opacity var(--motion-fast) var(--motion-ease-soft),
+    color var(--motion-fast) var(--motion-ease-soft),
+    border-color var(--motion-fast) var(--motion-ease-soft);
+}
+
+.code-block:hover .code-copy,
+.code-copy:focus-visible {
+  opacity: 1;
+}
+
+.code-copy:hover {
+  color: var(--fg);
+  border-color: var(--line-strong);
+}
+
+.code-copy[data-copied] {
+  opacity: 1;
+  color: var(--brand);
+  border-color: color-mix(in oklab, var(--brand) 35%, transparent);
+}
+
+/* 触屏没有悬停这回事，按钮得一直露着 */
+@media (hover: none) {
+  .code-copy {
+    opacity: 1;
+  }
+}
+
 .prose-note table {
   width: 100%;
   border-collapse: collapse;
