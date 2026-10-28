@@ -112,13 +112,17 @@ ReactBits 的效果是**素材**，不是风格。如果每个区块都挂一个
 | 首页 / 列表入场 | `Reveal`（IntersectionObserver） | 建立分段阅读节奏 | `translateY(8px)` + 220ms，一次性触发不重复；位移小到几乎察觉不到"在动" |
 | 笔记行 hover | 纯 CSS | 可点击性 | 右移 2px + 箭头淡入 + 底色微亮，120ms，0 JS |
 | `⌘K` 命令面板 | `Dialog` + `backdrop-blur` + 60ms stagger | 检索本身就是功能展示 | 全键盘可达，Esc 关闭，结果即时过滤 |
+| 路由切换 | `View Transitions` | 导航反馈：让"换了一页"这件事有物理感 | 旧页 120ms 退、新页 220ms 进（不是 400ms —— 切页要利落）。chunk 未预热时**跳过过渡**而不是截到 Suspense 白屏；`prefers-reduced-motion` 下完全不启动 |
 | `/craft` | `Dock` / `ScrollExpand` / `GradientWaves` | 展品 | 默认**静帧**，hover / focus / 点击后才跑；每格标注"用了什么、为什么" |
+| `/craft` 交互展位 | `TiltCard` / `MagneticButton` / `GlowBorder` | 展品 | 前两个指针驱动、hover 才动；`GlowBorder` 是常驻的，但只在展位里跑。三者都不得出现在列表页或阅读页 |
 | 404 | `GradientWaves` | 稀缺点位 | 全屏，一年见一次 |
 | 阅读页 | 无 | — | 只有进度条与 TOC 高亮 |
 
 ### 明确不做
 
 不做光标跟随光斑、不做全站粒子背景、不做列表 3D 卡片倾斜、不给每个元素都加 fade-in —— 逐条 stagger 会让页面读起来像"一直在加载"。**克制本身就是审美的一部分，而且是最难被抄走的那部分。**
+
+唯一的例外是 `/craft` 的展位：3D 倾斜、磁吸、流光边框都放在那里，因为那一页的定位就是"展厅"。展品的正当性来自**位置**，不来自效果本身 —— 同一个 `TiltCard` 放在笔记列表里就是噪音，放在 `/craft` 里就是证据。
 
 ## 5. 设计系统
 

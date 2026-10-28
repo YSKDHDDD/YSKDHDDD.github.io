@@ -9,3 +9,15 @@ export { default as RetroDetail } from './RetroDetail'
 export { default as Craft } from './Craft'
 export { default as About } from './About'
 export { default as NotFound } from './NotFound'
+
+/**
+ * 预渲染路径上所有页面都已经同步加载，预热没有意义。
+ * 保留同名导出只是为了让 SiteLayout 不必区分两种构建。
+ */
+export function isRoutePreloaded(): boolean {
+  return true
+}
+
+export function preloadRoute(): Promise<void> {
+  return Promise.resolve()
+}

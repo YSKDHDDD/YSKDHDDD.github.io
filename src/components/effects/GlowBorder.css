@@ -1,0 +1,60 @@
+/* 角度注册成可插值的自定义属性，旋转动画才能只跑在合成器上 */
+@property --glow-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.glow-border {
+  --glow-angle: 0deg;
+
+  position: relative;
+  /* 1px 在浅色底上几乎看不见光，1.5px 是"能察觉是一条光带"的下限 */
+  padding: 1.5px;
+  border-radius: 12px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -80%;
+  z-index: 0;
+  /* 中间那段比 brand 更亮：光要有"芯"，否则只是一条染色边 */
+  background: conic-gradient(
+    from var(--glow-angle),
+    transparent 0deg,
+    color-mix(in oklab, var(--brand) 45%, transparent) 20deg,
+    var(--brand) 32deg,
+    color-mix(in oklab, var(--brand) 55%, white) 42deg,
+    var(--brand) 52deg,
+    color-mix(in oklab, var(--brand) 35%, transparent) 70deg,
+    transparent 94deg,
+    transparent 360deg
+  );
+  animation: glow-sweep var(--glow-duration, 4.5s) linear infinite;
+}
+
+.glow-border__inner {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  /* 外框 12px 减去 1.5px 边，圆角才不会在转角处露缝 */
+  border-radius: 10.5px;
+  background: var(--surface);
+}
+
+@keyframes glow-sweep {
+  to {
+    --glow-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-border::before {
+    animation: none;
+    /* 停在一个固定角度，边框仍然是亮的，只是不动 */
+    --glow-angle: 40deg;
+  }
+}

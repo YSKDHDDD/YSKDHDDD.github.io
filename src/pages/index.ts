@@ -18,3 +18,49 @@ export const RetroDetail = lazy(() => import('./RetroDetail'))
 export const Craft = lazy(() => import('./Craft'))
 export const About = lazy(() => import('./About'))
 export const NotFound = lazy(() => import('./NotFound'))
+
+/**
+ * 路由 chunk 预热。
+ *
+ * 存在的理由只有一个：路由切换过渡不能截到 Suspense 的空白帧。
+ * 指针扫过链接时就把对应 chunk 取回来，点击时 lazy 的 thenable 已经 resolve，
+ * 过渡才能截到真实内容。触摸设备没有 hover，靠 pointerover 在按下瞬间预热。
+ */
+const routeLoaders: Record<string, () => Promise<unknown>> = {
+  '/': () => import('./Home'),
+  '/notes': () => import('./Notes'),
+  '/notes/:slug': () => import('./NoteDetail'),
+  '/retro': () => import('./Retro'),
+  '/retro/:slug': () => import('./RetroDetail'),
+  '/craft': () => import('./Craft'),
+  '/about': () => import('./About'),
+}
+
+const preloaded = new Set<string>(['/'])
+
+/** 把具体路径归一成 loader key：/notes/xxx → /notes/:slug，/notes/ → /notes */
+function loaderKey(pathname: string): string {
+  if (pathname.startsWith('/notes/')) return '/notes/:slug'
+  if (pathname.startsWith('/retro/')) return '/retro/:slug'
+  return pathname.replace(/\/+$/, '') || '/'
+}
+
+/** 首屏已经带了 Home 的 chunk，所以 / 永远算就绪 */
+export function isRoutePreloaded(pathname: string): boolean {
+  return preloaded.has(loaderKey(pathname))
+}
+
+export function preloadRoute(pathname: string): Promise<void> {
+  const key = loaderKey(pathname)
+  const loader = routeLoaders[key]
+
+  if (!loader || preloaded.has(key)) return Promise.resolve()
+
+  return loader().then(
+    () => {
+      preloaded.add(key)
+    },
+    // 预热失败不记录，下次还有机会重试；导航本身不该被它拦住
+    () => undefined,
+  )
+}

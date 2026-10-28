@@ -192,6 +192,39 @@
 }
 
 /* ==========================================================================
+   路由切换过渡：View Transitions
+   ==========================================================================
+
+   与 Reveal 的分工：Reveal 负责"元素进入视口"，这里负责"换了一页"。
+   旧页退得快、新页进得稍慢，读者感知到的是页面被替换，而不是两层淡入叠在一起。
+   导航条不做 view-transition-name 抠图 —— 它带 backdrop-filter，
+   在过渡的合成层里容易渲染异常，跟随整页一起淡出更稳。
+   ========================================================================== */
+
+@supports (view-transition-name: none) {
+  ::view-transition-old(root) {
+    animation: route-out var(--motion-fast) var(--motion-ease-soft) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: route-in var(--motion-base) var(--motion-ease-expo) both;
+  }
+}
+
+@keyframes route-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes route-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* ==========================================================================
    长文排版作用域
    ========================================================================== */
 
@@ -395,5 +428,12 @@
   [data-reveal] {
     opacity: 1;
     transform: none;
+  }
+
+  /* 伪元素不在 `*` 的匹配范围内，过渡动画要单独关掉 */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

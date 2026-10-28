@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, Boxes, Code2, Images, Sparkles } from 'lucide-react'
 import DecryptedText from '@/components/effects/DecryptedText'
 import Dock, { type DockItemData } from '@/components/effects/Dock'
+import GlowBorder from '@/components/effects/GlowBorder'
 import GradientWaves from '@/components/effects/GradientWaves'
+import MagneticButton from '@/components/effects/MagneticButton'
 import SoftAurora from '@/components/effects/SoftAurora'
+import TiltCard from '@/components/effects/TiltCard'
 import { useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 
@@ -162,6 +165,72 @@ export default function Craft() {
             <p className="mt-2 text-meta leading-relaxed text-muted">
               把滚动进度映射成 `width / height / border-radius` 的插值。
               「不为了展示而展示」也是这条工艺的一部分。
+            </p>
+          </div>
+        </article>
+      </section>
+
+      <section aria-label="交互展品" className="mt-4 grid gap-4 lg:grid-cols-2">
+        <article
+          id="tilt-card"
+          className="scroll-mt-24 overflow-hidden rounded-md border border-line"
+        >
+          <div className="grid h-56 place-items-center bg-bg p-6">
+            <TiltCard className="w-full max-w-[260px] rounded-md">
+              <div className="rounded-md border border-line bg-surface/90 p-5">
+                <p className="font-mono text-label tracking-[0.14em] text-faint">3D TILT</p>
+                <p className="mt-2 text-meta text-fg">把指针移上来</p>
+                <p className="mt-1 text-label leading-relaxed text-muted">
+                  倾斜量跟随指针位置，越靠边缘转得越多。
+                </p>
+              </div>
+            </TiltCard>
+          </div>
+          <div className="border-t border-line p-4">
+            <h2 className="font-mono text-meta text-fg">TiltCard</h2>
+            <p className="mt-2 text-meta leading-relaxed text-muted">
+              指针位置映射成 `rotateX` / `rotateY`，写进 CSS 变量直接改 style ——
+              每帧 setState 在低端机上会把 pointermove 拖成掉帧。悬停时过渡 120ms 跟手，
+              离开时 400ms expo 回弹：同一段 transform，两段手感，靠一个 `:hover` 覆盖时长就够。
+            </p>
+          </div>
+        </article>
+
+        <article
+          id="magnetic-button"
+          className="scroll-mt-24 overflow-hidden rounded-md border border-line"
+        >
+          <div className="grid h-56 place-items-center bg-bg">
+            <MagneticButton>把指针靠近</MagneticButton>
+          </div>
+          <div className="border-t border-line p-4">
+            <h2 className="font-mono text-meta text-fg">MagneticButton</h2>
+            <p className="mt-2 text-meta leading-relaxed text-muted">
+              感应区比按钮本身大一圈，位移是「指针到中心的距离 × 0.34」—— 越靠边缘拉力越大，
+              所以它是磁吸而不是跟随。回弹完全交给 expo 曲线，不用 JS 写 spring：
+              物理感来自曲线形状，不来自逐帧积分。
+            </p>
+          </div>
+        </article>
+
+        <article
+          id="glow-border"
+          className="scroll-mt-24 overflow-hidden rounded-md border border-line lg:col-span-2"
+        >
+          <div className="grid place-items-center bg-bg px-6 py-14">
+            <GlowBorder className="w-full max-w-[420px]">
+              <div className="px-6 py-8 text-center">
+                <p className="font-mono text-label tracking-[0.14em] text-faint">GLOW BORDER</p>
+                <p className="mt-2 text-meta text-fg">光沿边缘匀速走一圈</p>
+              </div>
+            </GlowBorder>
+          </div>
+          <div className="border-t border-line p-4">
+            <h2 className="font-mono text-meta text-fg">GlowBorder</h2>
+            <p className="mt-2 text-meta leading-relaxed text-muted">
+              边框是一维的，用不着 SVG 或 canvas。把角度注册成 `@property` 可插值变量，
+              conic-gradient 的旋转就整段跑在合成器上，主线程零成本。渐变里留两段透明，
+              光才有头和尾 —— 匀速旋转也因此带上了速度感。
             </p>
           </div>
         </article>

@@ -1,0 +1,66 @@
+.magnetic {
+  --mag-x: 0px;
+  --mag-y: 0px;
+
+  /* 感应范围要比按钮大，磁吸才有"引力"的感觉 */
+  display: inline-grid;
+  place-items: center;
+  padding: 1.75rem;
+  /* 指针事件只在感应区内生效，不会干扰页面其它部分 */
+  touch-action: manipulation;
+}
+
+.magnetic__button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transform: translate3d(var(--mag-x), var(--mag-y), 0);
+  /* 回弹比跟随慢一点：跟随是 120ms，回弹用 400ms 的 expo 收尾 */
+  transition:
+    transform var(--motion-in) var(--motion-ease-expo),
+    border-color var(--motion-fast) var(--motion-ease-soft),
+    background-color var(--motion-fast) var(--motion-ease-soft);
+}
+
+.magnetic:hover .magnetic__button {
+  transition-duration: var(--motion-fast), var(--motion-fast), var(--motion-fast);
+  border-color: var(--brand);
+}
+
+/* 光晕跟着按钮走，用伪元素省一层 DOM */
+.magnetic__button::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 0 24px -4px color-mix(in oklab, var(--brand) 55%, transparent);
+  transition: opacity var(--motion-base) var(--motion-ease-soft);
+}
+
+.magnetic:hover .magnetic__button::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magnetic__button {
+    transform: none;
+    transition: none;
+  }
+
+  .magnetic__button::after {
+    display: none;
+  }
+}

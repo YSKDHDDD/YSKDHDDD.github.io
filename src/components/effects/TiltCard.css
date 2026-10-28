@@ -1,0 +1,52 @@
+.tilt-card {
+  --tilt-rx: 0deg;
+  --tilt-ry: 0deg;
+  --tilt-gx: 50%;
+  --tilt-gy: 50%;
+
+  position: relative;
+  perspective: 900px;
+}
+
+.tilt-card__inner {
+  position: relative;
+  height: 100%;
+  border-radius: inherit;
+  transform: rotateX(var(--tilt-rx)) rotateY(var(--tilt-ry));
+  transform-style: preserve-3d;
+  /* 离开时用长过渡做回弹，悬停时再调短 —— 两段手感不一样 */
+  transition: transform var(--motion-in) var(--motion-ease-expo);
+}
+
+.tilt-card:hover .tilt-card__inner {
+  transition-duration: var(--motion-fast);
+}
+
+.tilt-card__glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle at var(--tilt-gx) var(--tilt-gy),
+    color-mix(in oklab, var(--brand) 30%, transparent),
+    transparent 62%
+  );
+  transition: opacity var(--motion-base) var(--motion-ease-soft);
+}
+
+.tilt-card:hover .tilt-card__glare {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tilt-card__inner {
+    transform: none;
+    transition: none;
+  }
+
+  .tilt-card__glare {
+    display: none;
+  }
+}
