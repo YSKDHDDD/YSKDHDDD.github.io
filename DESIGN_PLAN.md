@@ -344,3 +344,52 @@ dist 里只有一个 index.html
 | 每页 `<title>` 唯一 | 是（`/notes/xxx` 是文章名，不是站点名） |
 | 目录路由 | `/notes/xxx` → 301 → `/notes/xxx/`，canonical 指向最终地址 |
 | `tsc` / `eslint` / `build` / `smoke` | 0 / 0 / 0 / ALL RENDER |
+
+## 14. 部署：GitHub Pages（2026-10-28）
+
+选它的理由很实际：已有 GitHub 账号、零成本、和仓库天然绑定，不需要额外的平台账号。
+
+### 子路径是这类部署最大的坑
+
+GitHub Pages 的项目站点在 `https://用户名.github.io/仓库名/`，所有绝对路径都少一段前缀。要同时处理四层：
+
+| 层 | 位置 | 处理方式 |
+| --- | --- | --- |
+| 构建资源 | `vite.config.ts` 的 `base` | 由 `VITE_BASE` 注入，缺省 `/` |
+| 路由 | `BrowserRouter` 的 `basename` | 从 `import.meta.env.BASE_URL` 推导 |
+| 预渲染 | `StaticRouter` 的 `basename` | 与客户端用同一个值 |
+| 原生链接 | `<a href>`、favicon | 手写前缀 / `%BASE_URL%` 占位符 |
+
+第四层最容易漏：`<Link>` 走路由会自动带 basename，而 `<a href="/rss.xml">` 不会。
+
+### 一个会让预渲染白做的陷阱
+
+资源路径全对，也不代表没问题。如果预渲染的 `StaticRouter` 不带 basename，
+`<Link to="/notes">` 在服务端生成 `/notes`、在浏览器生成 `/仓库名/notes`。
+属性对不上，React 在 hydration 时丢掉那段 DOM 重新渲染 —— **预渲染的收益被完全抹平**。
+所以两边必须共用同一个 basename，这一条比资源路径更隐蔽。
+
+### 不硬编码仓库名
+
+workflow 用 `actions/configure-pages` 的输出注入 `VITE_SITE_URL` 与 `VITE_BASE`。
+仓库改名、以后换绑自定义域名，都不用改代码。
+
+### 踩坑记录
+
+`VITE_BASE=/demo-app npm run build` 在 Git Bash 里会变成 `/D:/.../demo-app` ——
+MSYS 把以 `/` 开头的值当 POSIX 路径做了转换。写进 `.env.local` 更稳。
+CI 跑在 Linux 上没有这个问题，所以这个坑只在本地验证时出现。
+
+### 验证方式
+
+`vite preview` 验证不了子路径：它只做 SPA fallback，任何路径都返回 `dist/index.html`，
+看起来"每页都对"。要用标准静态服务器模拟目录结构：
+
+```text
+tmp/demo-app/          ← python -m http.server 的根
+  index.html
+  notes/reactbits-audit/index.html
+```
+
+实测结果：13 个页面全部 200；`/demo-app/notes/xxx` 301 到带尾斜杠的地址；
+JS/CSS 资源 200；`rss.xml` / `sitemap.xml` 里的绝对地址都带子路径。

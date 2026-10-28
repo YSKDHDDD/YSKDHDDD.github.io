@@ -117,32 +117,57 @@ ReactBits 的效果是素材，不是风格。四条红线（详见 `DESIGN_PLAN
 
 预渲染脚本里有三道拦截，任何一道不过就构建失败（而不是安静地发布空页面）：出现 Suspense 占位块、出现骨架 `aria-busy`、正文少于 200 字符。
 
-## 部署
+## 部署（GitHub Pages）
 
-产物是纯静态目录，`dist/` 原样托管即可。
+仓库自带 `.github/workflows/deploy.yml`：推到 `main` 就自动构建并发布，本地不需要跑构建。
 
-```bash
-VITE_SITE_URL=https://your-domain.com npm run build
-```
+### 首次上线
 
-**上线前必须设 `VITE_SITE_URL`**，它决定 canonical、`og:url`、sitemap、RSS 里的绝对地址。没设时构建会打印警告，产物里写的是 `localhost`。
-
-| 平台 | 配置 |
-| --- | --- |
-| Cloudflare Pages / Netlify | 构建 `npm run build`，输出目录 `dist`；`public/_headers` 自动生效 |
-| Vercel | 同上，但 `_headers` 不生效，需在 `vercel.json` 里配 header |
-| GitHub Pages | 子路径部署（`user.github.io/repo/`）需额外在 `vite.config.ts` 设 `base`，并让 `SITE.url` 带上子路径 |
-
-`dist/404.html` 已生成，托管平台会用它接管未知路径。
-
-上线后自检：
+1. 在 GitHub 新建**空仓库**（不要勾选初始化 README，否则和本地历史冲突）
+2. 关联远程并推送：
 
 ```bash
-curl -s https://your-domain.com/notes/<某篇> | grep '<title>'   # 应是文章标题，不是站点名
-curl -sI https://your-domain.com/notes/<某篇> | head -1          # 200
-curl -s https://your-domain.com/sitemap.xml | head -3
-curl -s https://your-domain.com/rss.xml | head -5
+git remote add origin https://github.com/你的用户名/仓库名.git
+git push -u origin main
 ```
+
+3. 打开仓库 **Settings → Pages**，把 **Source** 设为 **GitHub Actions**
+4. 等 Actions 变绿，地址是 `https://你的用户名.github.io/仓库名/`
+
+### 不需要手写域名和路径
+
+workflow 用 `actions/configure-pages` 读出 Pages 的配置，把两个值注入构建：
+
+| 变量 | 来源 | 用途 |
+| --- | --- | --- |
+| `VITE_SITE_URL` | `base_url` | canonical / `og:url` / sitemap / RSS 的绝对地址 |
+| `VITE_BASE` | `base_path` | 静态资源前缀与 router basename |
+
+所以**仓库改名、以后换绑自定义域名，都不用改代码**。仓库叫 `用户名.github.io` 时站点在根路径，其他名字自动部署到 `/仓库名/` 子路径 —— 两种都能跑，不需要手动设 `base`。
+
+### 本地验证子路径构建
+
+```bash
+VITE_SITE_URL=https://用户名.github.io/仓库名 VITE_BASE=/仓库名/ npm run build
+```
+
+> 在 Git Bash 里直接写 `VITE_BASE=/仓库名` 会被 MSYS 当成路径转换成 `D:/...`，写进 `.env.local` 更稳（该文件已被 git 忽略）。CI 跑在 Linux 上，没有这个问题。
+
+### 其他平台
+
+产物是纯静态目录，`dist/` 原样托管即可：Cloudflare Pages / Netlify 填构建命令 `npm run build`、输出目录 `dist`，`public/_headers` 自动生效；Vercel 要把 header 搬进 `vercel.json`。
+
+GitHub Pages 没有自定义响应头的能力，`_headers` 在那边会被忽略 —— 保留它只是为了将来换平台时能直接用。
+
+### 上线后自检
+
+```bash
+curl -sI https://你的地址/notes/<某篇>/ | head -1          # 200
+curl -s https://你的地址/notes/<某篇>/ | grep '<title>'    # 文章标题，不是站点名
+curl -s https://你的地址/sitemap.xml | head -3
+```
+
+`dist/404.html` 已生成，GitHub Pages 会自动用它接管未知路径。
 
 ## 技术要点
 
