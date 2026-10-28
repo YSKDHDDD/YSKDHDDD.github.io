@@ -97,6 +97,15 @@
   background: linear-gradient(to top, var(--bg) 18%, transparent);
 }
 
+/**
+ * 页脚是这一页最后一样东西，而它在 SiteLayout 里、不在 .me 里面，
+ * 所以只能从外面按「当前有 .me」反选。留出的高度 = 面板厚度 68 + 底边距 12 + 一点余量，
+ * 窄屏下 footer 的两栏会挤到中间，不留这段就正好被 Dock 压住。
+ */
+body:has(.me) footer {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+}
+
 /* ---------- 降级 ---------- */
 
 @media (prefers-reduced-motion: reduce) {

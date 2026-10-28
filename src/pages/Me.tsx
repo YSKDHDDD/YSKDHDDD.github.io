@@ -307,11 +307,7 @@ export default function Me() {
         */}
         <div aria-hidden className="me-endglow" />
 
-        {/*
-          底部比顶部多留一截：Dock 常驻在视口底部，最后一行字要能从它下面走出来，
-          而不是一滚到底就停在面板后面。
-        */}
-        <div className="page-shell relative pt-24 pb-32 sm:pt-28 sm:pb-36">
+        <div className="page-shell relative py-24 sm:py-28">
           <p className="font-mono text-label tracking-[0.14em] text-faint">CONTACT</p>
           <h2 className="mt-3 max-w-[18em] text-h2 leading-[1.25] font-medium tracking-[-0.011em] text-fg">
             想聊，或者只是想看看我在写什么。
