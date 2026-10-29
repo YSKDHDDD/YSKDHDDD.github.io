@@ -131,8 +131,15 @@ export default function Notes() {
         </p>
       </header>
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-[170px_1fr]">
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+      {/*
+        `minmax(0,1fr)` 与下面那两个 min-w-0 是同一个 bug 的两道保险。
+        列表行的摘要是 truncate（white-space: nowrap），它的最小内容宽度等于
+        整段文字，grid 轨道的 min-content 因此被撑到 725px —— 390px 的屏幕上
+        整页横向溢出 359px。grid 项的 min-width 默认是 auto，必须显式压住，
+        truncate 才真的会截断而不是把容器顶开。
+      */}
+      <div className="mt-10 grid gap-8 lg:grid-cols-[170px_minmax(0,1fr)]">
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <div className="text-label tracking-[0.06em] text-faint">主题</div>
           <div className="mt-2 flex flex-wrap gap-1.5 lg:flex-col lg:items-start">
             <button
@@ -194,7 +201,7 @@ export default function Notes() {
           </div>
         </aside>
 
-        <div>
+        <div className="min-w-0">
           <div className="mb-3 flex items-center justify-between gap-3 border-b border-line pb-2">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
               <span className="font-mono text-label text-faint">{filtered.length} 条结果</span>

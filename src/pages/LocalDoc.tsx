@@ -5,12 +5,12 @@ import { PageWash } from '@/components/common/PageWash'
 import { ReadingProgress } from '@/components/notes/ReadingProgress'
 import { Toc } from '@/components/notes/Toc'
 import { TagChip } from '@/components/common/TagChip'
+import { TopicPicker } from '@/components/notes/TopicPicker'
 import { StatusDot } from '@/components/common/StatusDot'
 import { useLocalDocs } from '@/hooks/useLocalDocs'
-import { formatDate, topicLabels } from '@/lib/content'
-import { deleteLocalDoc, formatBytes } from '@/lib/localDocs'
+import { formatDate } from '@/lib/content'
+import { deleteLocalDoc, formatBytes, updateLocalDocMeta } from '@/lib/localDocs'
 import { renderMarkdown, stripTitleHeading } from '@/lib/markdown'
-import { topicTone } from '@/lib/tone'
 
 /**
  * 本地文档的阅读页。
@@ -32,7 +32,7 @@ export default function LocalDocPage() {
   const [params] = useSearchParams()
   const id = params.get('id') ?? ''
   const navigate = useNavigate()
-  const { docs, ready } = useLocalDocs()
+  const { docs, ready, reload } = useLocalDocs()
 
   const doc = docs.find((item) => item.id === id)
   const rendered = useMemo(
@@ -146,7 +146,11 @@ export default function LocalDocPage() {
 
         <header className="mt-8 max-w-[680px]">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-label text-faint">
-            <span style={{ color: topicTone[doc.topic] }}>{topicLabels[doc.topic]}</span>
+            <TopicPicker
+              value={doc.topic}
+              label="这篇文档的主题"
+              onChange={(topic) => void updateLocalDocMeta(doc.id, { topic }).then(() => reload())}
+            />
             <span aria-hidden>·</span>
             <time dateTime={doc.date}>{formatDate(doc.date)}</time>
             <span aria-hidden>·</span>
@@ -159,7 +163,10 @@ export default function LocalDocPage() {
           </div>
 
           <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">{doc.title}</h1>
-          <p className="mt-4 text-body text-muted">{doc.summary}</p>
+          {/* 自动截的摘要就是正文首段，页头再放一遍等于同一句话读两次 */}
+          {doc.summaryFrom === 'meta' ? (
+            <p className="mt-4 text-body text-muted">{doc.summary}</p>
+          ) : null}
 
           <div className="mt-5 flex flex-wrap items-center gap-1.5">
             {doc.tags.map((tag) => (

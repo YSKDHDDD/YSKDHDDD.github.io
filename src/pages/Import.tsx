@@ -12,16 +12,17 @@ import {
 } from 'lucide-react'
 import { PageWash } from '@/components/common/PageWash'
 import { StatusDot } from '@/components/common/StatusDot'
+import { TopicPicker } from '@/components/notes/TopicPicker'
 import { useLocalDocs } from '@/hooks/useLocalDocs'
-import { formatDate, topicLabels } from '@/lib/content'
+import { formatDate } from '@/lib/content'
 import {
   deleteLocalDoc,
   formatBytes,
   parseDocText,
   putLocalDoc,
+  updateLocalDocMeta,
   type LocalDoc,
 } from '@/lib/localDocs'
-import { topicTone } from '@/lib/tone'
 import { cn } from '@/lib/utils'
 
 const ACCEPT = '.md,.mdx,.markdown,.txt,text/markdown,text/plain'
@@ -91,6 +92,15 @@ export default function ImportPage() {
   const remove = async (id: string) => {
     await deleteLocalDoc(id)
     setPendingDelete(null)
+    await reload()
+  }
+
+  /*
+    改主题后必须 reload 而不是就地改 state：docs 是 IndexedDB 的投影，
+    列表页和 /notes 读的是同一份数据。就地改会让两处算出不同的树。
+  */
+  const changeTopic = async (id: string, topic: LocalDoc['topic']) => {
+    await updateLocalDocMeta(id, { topic })
     await reload()
   }
 
@@ -256,13 +266,11 @@ export default function ImportPage() {
                     {doc.title}
                   </Link>
 
-                  <span
-                    className="text-label"
-                    style={{ color: topicTone[doc.topic] }}
-                    title={`主题：${topicLabels[doc.topic]}`}
-                  >
-                    {topicLabels[doc.topic]}
-                  </span>
+                  <TopicPicker
+                    value={doc.topic}
+                    label={`${doc.title} 的主题`}
+                    onChange={(topic) => void changeTopic(doc.id, topic)}
+                  />
                   <StatusDot status={doc.status} className="hidden sm:inline-flex" />
                   <span className="hidden font-mono text-label text-faint tabular-nums md:inline">
                     {doc.fileName}
@@ -305,15 +313,20 @@ export default function ImportPage() {
         )}
       </section>
 
+      {/*
+        两个 min-w-0 不是可选的：grid item 的默认 min-width 是 auto，
+        下面那个 <pre> 里的长代码行会把它顶宽，整页跟着横向溢出 12px。
+        有了 min-w-0，pre 自己的 overflow-x-auto 才真正生效。
+      */}
       <aside className="mt-14 grid gap-6 rounded-md border border-line bg-surface/40 p-5 sm:grid-cols-2">
-        <div>
+        <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-label tracking-[0.06em] text-faint">
             <HardDrive className="h-3.5 w-3.5" aria-hidden />
             文件头可选
           </h2>
           <p className="mt-2 text-meta text-muted">
             没有 frontmatter 也能导入：标题取第一个 <code>#</code> 或者文件名，
-            摘要取第一段，主题归到「工程」，成熟度算「萌芽」。
+            摘要取第一段，主题算「未分类」——导入后随时能改，成熟度算「萌芽」。
           </p>
           <pre className="mt-3 overflow-x-auto rounded-sm border border-line bg-code-bg p-3 font-mono text-label leading-relaxed text-muted">
 {`---
@@ -325,7 +338,7 @@ status: growing    # seedling | growing | evergreen
 ---`}
           </pre>
         </div>
-        <div>
+        <div className="min-w-0">
           <h2 className="text-label tracking-[0.06em] text-faint">边界写清楚</h2>
           <ul className="mt-2 space-y-2 text-meta text-muted">
             <li>· .mdx 里的 React 组件不会执行，会作为文字显示</li>

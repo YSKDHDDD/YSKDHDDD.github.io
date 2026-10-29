@@ -33,6 +33,7 @@
   --topic-engineering: #4d8dff;
   --topic-design: #f472b6;
   --topic-tooling: #2dd4bf;
+  --topic-misc: #8b93a7;
 
   --code-bg: #0a0f1a;
 
@@ -70,6 +71,7 @@
   --topic-engineering: #1d5fd0;
   --topic-design: #b3277a;
   --topic-tooling: #0d7d70;
+  --topic-misc: #6b7383;
 
   --code-bg: #f7f8fc;
 }
@@ -97,6 +99,7 @@
   --color-topic-engineering: var(--topic-engineering);
   --color-topic-design: var(--topic-design);
   --color-topic-tooling: var(--topic-tooling);
+  --color-topic-misc: var(--topic-misc);
 
   /* 不加载 Inter / 中文字体包：系统栈在中文环境下渲染更稳，也省 300KB */
   --font-sans:

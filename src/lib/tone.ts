@@ -10,6 +10,8 @@ export const topicTone: Record<TopicId, string> = {
   engineering: 'var(--topic-engineering)',
   design: 'var(--topic-design)',
   tooling: 'var(--topic-tooling)',
+  // 未分类刻意用中性色：它不是一种"主题"，只是"还没归类"的诚实表示
+  misc: 'var(--topic-misc)',
 }
 
 /** 页面环境色：a 从左上来，b 从右上来。缺省就用品牌色，不需要每页都写 */

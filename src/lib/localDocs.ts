@@ -16,6 +16,14 @@ export interface LocalDoc {
   tags: string[]
   status: NoteStatus
   summary: string
+  /**
+   * 摘要的出处。
+   *
+   * `body` 表示这是从正文首段截的 —— 阅读页靠它决定要不要显示摘要：
+   * 首段在正文里本来就会出现一次，页头再放一遍就是同一句话读两次。
+   * 列表页不分这两种，那里看不到正文，摘要必须显示。
+   */
+  summaryFrom: 'meta' | 'body'
   /** 原始 markdown，渲染推迟到打开时再做 */
   body: string
   fileName: string
@@ -27,7 +35,7 @@ const DB_NAME = 'exoself'
 const DB_VERSION = 1
 const STORE = 'docs'
 
-const TOPICS: TopicId[] = ['engineering', 'design', 'tooling']
+const TOPICS: TopicId[] = ['engineering', 'design', 'tooling', 'misc']
 const STATUSES: NoteStatus[] = ['seedling', 'growing', 'evergreen']
 
 function hasIndexedDb(): boolean {
@@ -75,6 +83,25 @@ export async function listLocalDocs(): Promise<LocalDoc[]> {
 export async function putLocalDoc(doc: LocalDoc): Promise<void> {
   if (!hasIndexedDb()) throw new Error('这个浏览器不支持本地存储')
   await tx('readwrite', (store) => store.put(doc))
+}
+
+/**
+ * 只改元数据，不动正文。
+ *
+ * 导入时主题只能靠 frontmatter 猜，猜错了不该逼用户删掉重导 ——
+ * 重导会换掉 importedAt，列表顺序也跟着变，一次分类调整就变成一次搬家。
+ */
+export async function updateLocalDocMeta(
+  id: string,
+  patch: Partial<Pick<LocalDoc, 'topic' | 'tags' | 'status'>>,
+): Promise<LocalDoc | null> {
+  if (!hasIndexedDb()) return null
+  const current = await tx<LocalDoc | undefined>('readonly', (store) => store.get(id))
+  if (!current) return null
+  const next: LocalDoc = { ...current, ...patch }
+  // readwrite 事务不能跨 await 复用，所以重新开一次
+  await tx('readwrite', (store) => store.put(next))
+  return next
 }
 
 export async function deleteLocalDoc(id: string): Promise<void> {
@@ -165,8 +192,13 @@ export function parseDocText(text: string, fileName: string): ParseResult {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(data.date ?? '') ? data.date : today()
   if (data.date && date !== data.date) warnings.push('日期格式不对，已用今天')
 
-  const topic = TOPICS.includes(data.topic as TopicId) ? (data.topic as TopicId) : 'engineering'
-  if (data.topic && topic !== data.topic) warnings.push('主题不在列表里，归到「工程」')
+  /*
+    没写主题就归「未分类」，不归「工程」。
+    前者是诚实的"还不知道"，后者会让工程的计数凭空变大 —— 一篇读书笔记
+    拉高工程分类的数字，筛选出来的人会以为站里多了一篇工程笔记。
+  */
+  const topic = TOPICS.includes(data.topic as TopicId) ? (data.topic as TopicId) : 'misc'
+  if (data.topic && topic !== data.topic) warnings.push('主题不在列表里，先归到「未分类」')
 
   const status = STATUSES.includes(data.status as NoteStatus)
     ? (data.status as NoteStatus)
@@ -183,6 +215,7 @@ export function parseDocText(text: string, fileName: string): ParseResult {
     tags: parseList(data.tags ?? ''),
     status,
     summary,
+    summaryFrom: data.summary ? 'meta' : 'body',
     body,
     fileName,
     size: new Blob([text]).size,

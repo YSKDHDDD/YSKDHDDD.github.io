@@ -9,7 +9,14 @@ export { noteContent, retroContent } from '@/lib/bodies'
 
 /** 成熟度是这套外脑的灵魂字段：它让"长期维护"这件事变得可见 */
 export type NoteStatus = 'seedling' | 'growing' | 'evergreen'
-export type TopicId = 'engineering' | 'design' | 'tooling'
+/**
+ * 内容主题。
+ *
+ * `misc` 只给本地导入的文档兜底用：大多数 markdown 没有 frontmatter，
+ * 硬把它塞进「工程」会让那三个分类的计数失真。它不承诺"站内会有这个分类"——
+ * 主题 chips 与「N 个主题」都从数据现算，没有本地文档时它根本不会出现。
+ */
+export type TopicId = 'engineering' | 'design' | 'tooling' | 'misc'
 
 export interface TocItem {
   depth: number
@@ -105,6 +112,7 @@ export const topicLabels: Record<TopicId, string> = {
   engineering: '工程',
   design: '设计',
   tooling: '工具链',
+  misc: '未分类',
 }
 
 export const statusLabels: Record<NoteStatus, string> = {
