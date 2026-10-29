@@ -35,7 +35,8 @@ export default function Home() {
   return (
     <>
       <section className="relative isolate overflow-hidden">
-        <AuroraBackdrop />
+        {/* 光从左边来：右边那块墨色图版不透明的，光不先收住就会在它边缘被切断 */}
+        <AuroraBackdrop fadeToRight />
 
         <div className="page-shell relative pt-14 pb-10 sm:pt-20 sm:pb-14">
           <div className="grid items-center gap-10 lg:grid-cols-[1.12fr_0.88fr] lg:gap-14">

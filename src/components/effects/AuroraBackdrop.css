@@ -1,0 +1,29 @@
+/**
+ * 首屏右半边挂着一块墨色的图版（DitherVeil），它是不透明的。
+ * 极光原本铺满整幅，一撞上那块黑就变成「光被剪掉一块」—— 右半幅凭空断了。
+ *
+ * 所以让光有方向：左边是光源，到 84% 处已经收干净，图版落在余光之外。
+ * 两个效果都完整，谁也不遮谁。
+ *
+ * 只在「深色 + lg 以上」生效：
+ * - 浅色主题是白纸黑版，黑块本来就不吃光，不存在「洞」的问题；
+ * - 窄屏图版在文案下方，不是左右关系，横向遮罩会把极光整条切掉。
+ */
+@media (min-width: 1024px) {
+  [data-theme='dark'] .aurora-fade-right {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 0%,
+      #000 42%,
+      rgba(0, 0, 0, 0.6) 64%,
+      transparent 84%
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 0%,
+      #000 42%,
+      rgba(0, 0, 0, 0.6) 64%,
+      transparent 84%
+    );
+  }
+}
