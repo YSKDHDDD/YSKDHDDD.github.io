@@ -5,10 +5,9 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type HTMLAttributes,
   type MouseEvent as ReactMouseEvent
 } from 'react';
-import { motion } from 'motion/react';
-import type { HTMLMotionProps } from 'motion/react';
 
 const styles: Record<'wrapper' | 'srOnly' | 'word' | 'cell' | 'ghost' | 'glyph', CSSProperties> = {
   wrapper: { display: 'inline-block', whiteSpace: 'pre-wrap' },
@@ -24,7 +23,13 @@ const FADE_PEAK = 0.62;
 const FADE_LEAD = 6;
 const SETTLE = 'color 0.7s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
 
-interface DecryptedTextProps extends HTMLMotionProps<'span'> {
+/*
+ * 动画全在这个文件里手写（间隔定时器推进 mask → setFrame 重绘，逐字翻转用 WAAPI）。
+ * 之前这里包了一层 motion/react 的 <motion.span>，但三处调用都没有传 motion 独有的
+ * props（initial / animate / whileHover / variants 一个都没有），那层包装只是把 span
+ * 又包了 47KB（gzip）的运行时 —— 全站入口都在引用它。换回原生 span 即可。
+ */
+interface DecryptedTextProps extends HTMLAttributes<HTMLSpanElement> {
   text?: string; // <--- 修改点1：改为可选属性
   speed?: number;
   maxIterations?: number;
@@ -312,7 +317,7 @@ export default function DecryptedText({
   const animateProps = hoverable ? { onMouseEnter: handleMouseEnter, onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave } : animateOn === 'click' ? { onClick: handleClick } : {};
 
   return (
-    <motion.span className={parentClassName} ref={containerRef} style={styles.wrapper} {...animateProps} {...props}>
+    <span className={parentClassName} ref={containerRef} style={styles.wrapper} {...animateProps} {...props}>
       <span style={styles.srOnly}>{chars.join('')}</span>
       <span aria-hidden="true">
         {groups.map(group => typeof group === 'string' ? group : (
@@ -328,6 +333,6 @@ export default function DecryptedText({
           </span>
         ))}
       </span>
-    </motion.span>
+    </span>
   );
 }

@@ -92,7 +92,7 @@ export default function Craft() {
         <p className="font-mono text-label tracking-[0.14em] text-faint">CRAFT</p>
         <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">工艺</h1>
         <p className="mt-3 text-body text-muted">
-          这里放的是效果的**证据**，不是效果本身。每个都标注了用了什么、为什么留，
+          这里放的是效果的「证据」，不是效果本身。每个都标注了用了什么、为什么留，
           以及为什么大部分动效被拒绝了。
         </p>
       </header>
