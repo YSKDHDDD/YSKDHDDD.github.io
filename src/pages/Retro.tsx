@@ -1,12 +1,14 @@
 import { RetroCard } from '@/components/notes/RetroCard'
 import { Reveal } from '@/components/effects/Reveal'
+import { PageWash } from '@/components/common/PageWash'
 import { retros } from '@/lib/content'
 
 export default function Retro() {
   return (
     <div className="page-shell py-12 sm:py-16">
+      <PageWash tone="retro" />
       <header className="max-w-[52ch]">
-        <p className="font-mono text-label tracking-[0.14em] text-faint">RETROSPECTIVE</p>
+        <p className="font-mono text-label tracking-[0.14em] text-brand-2">RETROSPECTIVE</p>
         <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">项目复盘</h1>
         <p className="mt-3 text-body text-muted">
           固定四段结构：问题与约束 → 关键决策 → 结果 → 如果重来。

@@ -11,8 +11,8 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
  * 不加 hover:scale —— 位移会让按钮"跳"，而这里需要的是"确认可点"。
  */
 const variants = {
-  primary: 'bg-brand text-white hover:bg-brand/90',
-  outline: 'border border-line-strong text-fg hover:bg-surface-2',
+  primary: 'btn-brand hover:brightness-110',
+  outline: 'border border-line-strong text-fg hover:border-brand/45 hover:bg-surface-2',
   ghost: 'text-muted hover:text-fg hover:bg-surface-2',
   link: 'text-fg underline decoration-line-strong underline-offset-4 hover:decoration-brand px-0 h-auto',
 }

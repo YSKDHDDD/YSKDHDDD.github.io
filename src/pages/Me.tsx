@@ -13,6 +13,7 @@ import MagneticButton from '@/components/effects/MagneticButton'
 import ScrollExpand from '@/components/effects/ScrollExpand'
 import TiltCard from '@/components/effects/TiltCard'
 import { NoteRow } from '@/components/notes/NoteRow'
+import { PageWash } from '@/components/common/PageWash'
 import { Button } from '@/components/ui/Button'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { formatDate, notes, retros } from '@/lib/content'
@@ -132,6 +133,7 @@ export default function Me() {
 
   return (
     <div className="me">
+      <PageWash tone="me" />
       {/* ---------- 首屏：极光在标题背后，不在一个框里 ---------- */}
       <section
         id="top"

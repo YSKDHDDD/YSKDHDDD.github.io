@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight } from 'lucide-react'
 import type { Entry, RetroMeta } from '@/lib/content'
 import { topicLabels } from '@/lib/content'
+import { topicTone } from '@/lib/tone'
 import { cn } from '@/lib/utils'
 
 /** 复盘卡：突出"周期 + 一个能说明结果的变化"，而不是封面图 */
@@ -13,11 +14,17 @@ export function RetroCard({ retro, className }: { retro: Entry<RetroMeta>; class
     <Link
       to={`/retro/${slug}`}
       className={cn(
-        'group flex flex-col justify-between gap-6 rounded-md border border-line bg-surface/50 p-5',
-        'transition-colors duration-[var(--motion-fast)] ease-soft hover:border-line-strong',
+        'group relative flex flex-col justify-between gap-6 overflow-hidden rounded-md border border-line bg-surface/50 p-5',
+        'transition-colors duration-[var(--motion-fast)] ease-soft hover:border-brand/35',
         className,
       )}
     >
+      {/* 顶部一条渐变，悬停才亮：卡片本身的边界不变，只是"被点亮" */}
+      <span
+        aria-hidden
+        className="nav-underline absolute inset-x-0 top-0 h-[2px] opacity-0 transition-opacity duration-[var(--motion-base)] group-hover:opacity-100"
+      />
+
       <div>
         <div className="flex items-center justify-between gap-3">
           <span className="font-mono text-label tracking-[0.04em] text-faint">{meta.period}</span>
@@ -41,7 +48,9 @@ export function RetroCard({ retro, className }: { retro: Entry<RetroMeta>; class
             </div>
           </div>
         ) : null}
-        <span className="text-label text-faint">{topicLabels[meta.topic]}</span>
+        <span className="text-label" style={{ color: topicTone[meta.topic] }}>
+          {topicLabels[meta.topic]}
+        </span>
       </div>
     </Link>
   )

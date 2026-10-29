@@ -30,7 +30,7 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
         <Link to="/" className="group flex items-center gap-2" aria-label="学习外脑 · 首页">
           <span
             aria-hidden
-            className="grid h-6 w-6 place-items-center rounded-[6px] bg-brand text-[11px] leading-none font-medium text-white"
+            className="btn-brand grid h-6 w-6 place-items-center rounded-[6px] text-[11px] leading-none font-medium"
           >
             脑
           </span>
@@ -48,7 +48,8 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
                 cn(
                   // whitespace-nowrap 必须有：五项目录挤在 390px 里时，
                   // flex 会按字数压缩宽度，把「笔记」拆成一字一行。
-                  'relative shrink-0 px-2 py-1.5 text-meta whitespace-nowrap transition-colors duration-[var(--motion-fast)] sm:px-2.5',
+                  // 六项目录 + 两个按钮在 390px 里刚好差十几像素，靠窄屏收紧内边距让出来
+                  'relative shrink-0 px-1.5 py-1.5 text-meta whitespace-nowrap transition-colors duration-[var(--motion-fast)] sm:px-2.5',
                   link.to === '/about' && 'hidden md:inline-block',
                   isActive ? 'text-fg' : 'text-muted hover:text-fg',
                 )
@@ -57,10 +58,11 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
               {({ isActive }) => (
                 <>
                   {link.label}
+                  {/* 当前项的下划线用品牌渐变：颜色是"你在哪"的信号，不是装饰 */}
                   <span
                     aria-hidden
                     className={cn(
-                      'absolute inset-x-2.5 -bottom-px h-px bg-fg transition-opacity duration-[var(--motion-fast)]',
+                      'nav-underline absolute inset-x-2.5 -bottom-px h-[2px] rounded-full transition-opacity duration-[var(--motion-fast)]',
                       isActive ? 'opacity-100' : 'opacity-0',
                     )}
                   />
@@ -75,13 +77,14 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
             type="button"
             onClick={onOpenSearch}
             className={cn(
-              'flex h-8 items-center gap-2 rounded-sm border border-line px-2 text-faint',
+              'flex h-8 items-center gap-2 rounded-sm border border-line px-1.5 text-faint sm:px-2',
               'transition-colors duration-[var(--motion-fast)] hover:border-line-strong hover:text-fg',
             )}
             aria-label="搜索（快捷键 Command K）"
           >
             <Command className="h-3.5 w-3.5" aria-hidden />
-            <kbd className="font-mono text-label">K</kbd>
+            {/* 手机上没有 ⌘K 这个键，留着字母只是白占宽度 */}
+            <kbd className="hidden font-mono text-label sm:inline">K</kbd>
           </button>
 
           <button

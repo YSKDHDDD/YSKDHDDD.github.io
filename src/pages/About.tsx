@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight } from 'lucide-react'
+import { PageWash } from '@/components/common/PageWash'
 import { SITE } from '@/lib/site'
 
 const strengths = [
@@ -32,8 +33,9 @@ const strengths = [
 export default function About() {
   return (
     <div className="page-shell py-12 sm:py-16">
+      <PageWash tone="about" />
       <header className="max-w-[52ch]">
-        <p className="font-mono text-label tracking-[0.14em] text-faint">ABOUT</p>
+        <p className="font-mono text-label tracking-[0.14em] text-brand-2">ABOUT</p>
         <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">关于</h1>
       </header>
 

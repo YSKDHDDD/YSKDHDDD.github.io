@@ -5,6 +5,7 @@ import { mdxComponents } from '@/components/mdx/registry'
 import { ReadingProgress } from '@/components/notes/ReadingProgress'
 import { Toc } from '@/components/notes/Toc'
 import { StatusDot } from '@/components/common/StatusDot'
+import { PageWash } from '@/components/common/PageWash'
 import { Badge } from '@/components/ui/Badge'
 import { TagChip } from '@/components/common/TagChip'
 import { RelatedReading } from '@/components/notes/RelatedReading'
@@ -17,6 +18,7 @@ import {
   statusHints,
   topicLabels,
 } from '@/lib/content'
+import { topicTone } from '@/lib/tone'
 
 export default function NoteDetail() {
   const { slug = '' } = useParams()
@@ -45,6 +47,7 @@ export default function NoteDetail() {
 
   return (
     <>
+      <PageWash tone="notes" />
       <ReadingProgress />
 
       <div className="page-shell py-10 sm:py-14">
@@ -58,7 +61,7 @@ export default function NoteDetail() {
 
         <header className="mt-8 max-w-[680px]">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-label text-faint">
-            <span>{topicLabels[meta.topic]}</span>
+            <span style={{ color: topicTone[meta.topic] }}>{topicLabels[meta.topic]}</span>
             <span aria-hidden>·</span>
             <time dateTime={meta.date}>{formatDate(meta.date)}</time>
             <span aria-hidden>·</span>

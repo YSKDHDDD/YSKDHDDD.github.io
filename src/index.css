@@ -9,25 +9,32 @@
 :root {
   color-scheme: dark;
 
-  --bg: #0b0f19;
-  --bg-subtle: #0d1220;
-  --surface: #121826;
-  --surface-2: #182033;
-  --line: rgb(255 255 255 / 0.08);
-  --line-strong: rgb(255 255 255 / 0.16);
+  --bg: #090c15;
+  --bg-subtle: #0b101b;
+  --surface: #101623;
+  --surface-2: #161f30;
+  --line: rgb(255 255 255 / 0.085);
+  --line-strong: rgb(255 255 255 / 0.17);
 
-  --fg: #e6e8ee;
-  --muted: #9aa3b2;
-  --faint: #6b7484;
+  --fg: #e9ebf3;
+  --muted: #9ba5ba;
+  --faint: #6b7488;
 
-  --brand: #6366f1;
-  --brand-soft: rgb(99 102 241 / 0.12);
-  --decision: #f0b429;
-  --warn: #e5534b;
-  --unverified: #4b9ce5;
-  --evergreen: #3fbf7f;
+  /* 品牌色有两个端点：单色品牌必然显得"平"，渐变才有光 */
+  --brand: #7b6cff;
+  --brand-2: #3ea6ff;
+  --brand-soft: rgb(123 108 255 / 0.14);
+  --decision: #ffb224;
+  --warn: #ff6161;
+  --unverified: #4d9dff;
+  --evergreen: #34d399;
 
-  --code-bg: #0c111d;
+  /* 主题色：让「工程 / 设计 / 工具链」在列表里就能被眼睛区分，不必读字 */
+  --topic-engineering: #4d8dff;
+  --topic-design: #f472b6;
+  --topic-tooling: #2dd4bf;
+
+  --code-bg: #0a0f1a;
 
   /* 动效：只有三档，写死在变量里，组件不许自己编时长 */
   --motion-fast: 120ms;
@@ -40,25 +47,31 @@
 [data-theme='light'] {
   color-scheme: light;
 
-  --bg: #fcfcfd;
-  --bg-subtle: #f4f5f8;
+  --bg: #fbfbfe;
+  --bg-subtle: #f3f5fa;
   --surface: #ffffff;
-  --surface-2: #f7f8fa;
-  --line: rgb(9 12 20 / 0.09);
-  --line-strong: rgb(9 12 20 / 0.16);
+  --surface-2: #f6f7fb;
+  --line: rgb(12 16 28 / 0.09);
+  --line-strong: rgb(12 16 28 / 0.17);
 
-  --fg: #16181d;
-  --muted: #525b68;
-  --faint: #7d8695;
+  --fg: #171a21;
+  --muted: #525b6b;
+  --faint: #7c8598;
 
-  --brand: #4f46e5;
-  --brand-soft: rgb(79 70 229 / 0.08);
-  --decision: #9a6700;
+  --brand: #5b4ae0;
+  --brand-2: #0b7fd4;
+  --brand-soft: rgb(91 74 224 / 0.09);
+  --decision: #946200;
   --warn: #b42318;
-  --unverified: #1a6bb5;
-  --evergreen: #1d7a4d;
+  --unverified: #1668b3;
+  --evergreen: #157f52;
 
-  --code-bg: #f7f8fa;
+  /* 浅色底上同一组色相要压暗一档，否则 4.5:1 达不到 */
+  --topic-engineering: #1d5fd0;
+  --topic-design: #b3277a;
+  --topic-tooling: #0d7d70;
+
+  --code-bg: #f7f8fc;
 }
 
 @theme inline {
@@ -74,11 +87,16 @@
   --color-faint: var(--faint);
 
   --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
   --color-brand-soft: var(--brand-soft);
   --color-decision: var(--decision);
   --color-warn: var(--warn);
   --color-unverified: var(--unverified);
   --color-evergreen: var(--evergreen);
+
+  --color-topic-engineering: var(--topic-engineering);
+  --color-topic-design: var(--topic-design);
+  --color-topic-tooling: var(--topic-tooling);
 
   /* 不加载 Inter / 中文字体包：系统栈在中文环境下渲染更稳，也省 300KB */
   --font-sans:
@@ -127,8 +145,24 @@
     -webkit-text-size-adjust: 100%;
   }
 
-  body {
+  /*
+    背景画在 html 上，不画在 body 上。
+    原因：页面级环境色用的是 z-index:-1，负层会排在"祖先的背景"之上、"body 的背景"之下。
+    body 一旦自己带背景，环境色就整块被盖掉 —— 这个 bug 在截图里表现为"什么都没变"。
+  */
+  html {
     background-color: var(--bg);
+    /* 一层极淡的顶光：页面不再是"一整块纯色"，但也没到"渐变背景"的程度 */
+    background-image: radial-gradient(
+      120% 55% at 50% -25%,
+      color-mix(in oklab, var(--brand) 13%, transparent),
+      transparent 62%
+    );
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+
+  body {
     color: var(--fg);
     font-family: var(--font-sans);
     font-size: 1rem;
@@ -137,8 +171,16 @@
     text-rendering: optimizeLegibility;
   }
 
+  [data-theme='light'] html {
+    background-image: radial-gradient(
+      120% 55% at 50% -25%,
+      color-mix(in oklab, var(--brand) 9%, transparent),
+      transparent 60%
+    );
+  }
+
   ::selection {
-    background-color: rgb(99 102 241 / 0.28);
+    background-color: color-mix(in oklab, var(--brand) 32%, transparent);
   }
 
   :focus-visible {
@@ -172,6 +214,110 @@
   max-width: 1120px;
   margin-inline: auto;
   padding-inline: 1.5rem;
+}
+
+/* ==========================================================================
+   颜色：一套"冷底 + 三个色相"的系统
+   ==========================================================================
+
+   之前全站只有一种靛蓝，且几乎不出现，于是每个页面看起来都像同一张灰底稿。
+   现在颜色的分工是固定的，不允许组件自由发挥：
+
+   - brand / brand-2   动作与身份（按钮、链接、导航下划线、选中态）
+   - topic-*           内容分类（工程蓝 / 设计粉 / 工具链青），只用于"标签级"元素
+   - decision/warn/…   状态语义，沿用原来的
+
+   页面级还有一层 wash：把主题色铺在首屏顶部，越往下越淡。
+   正文必须保持中性 —— 颜色用来区分，不用来装饰。
+   ========================================================================== */
+
+.page-wash {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: -1;
+  height: min(94vh, 880px);
+  overflow: hidden;
+  pointer-events: none;
+  /*
+    三层而不是一层：上面两个色团负责"这页是什么颜色"，
+    最下面一层很宽的低透明度色带负责"颜色不要断在一条直线上"。
+  */
+  background-image:
+    radial-gradient(
+      76% 58% at 10% -14%,
+      color-mix(in oklab, var(--wash-a, var(--brand)) 58%, transparent),
+      transparent 76%
+    ),
+    radial-gradient(
+      66% 52% at 92% -8%,
+      color-mix(in oklab, var(--wash-b, var(--brand-2)) 46%, transparent),
+      transparent 78%
+    ),
+    radial-gradient(
+      120% 40% at 50% 18%,
+      color-mix(in oklab, var(--wash-a, var(--brand)) 14%, transparent),
+      transparent 80%
+    );
+  mask-image: linear-gradient(to bottom, #000 0%, #000 52%, transparent 96%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 52%, transparent 96%);
+}
+
+[data-theme='light'] .page-wash {
+  background-image:
+    radial-gradient(
+      76% 58% at 10% -14%,
+      color-mix(in oklab, var(--wash-a, var(--brand)) 30%, transparent),
+      transparent 76%
+    ),
+    radial-gradient(
+      66% 52% at 92% -8%,
+      color-mix(in oklab, var(--wash-b, var(--brand-2)) 22%, transparent),
+      transparent 78%
+    ),
+    radial-gradient(
+      120% 40% at 50% 18%,
+      color-mix(in oklab, var(--wash-a, var(--brand)) 7%, transparent),
+      transparent 80%
+    );
+}
+
+/* 渐变文字：只给一处用（首页那个会被点击的词），多了就廉价 */
+@utility text-gradient {
+  background-image: linear-gradient(100deg, var(--brand-2), var(--brand) 55%, var(--topic-design));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* 一条会褪色的分隔线，替代纯色 border：让区块之间有"光"的变化 */
+@utility rule-gradient {
+  height: 1px;
+  background-image: linear-gradient(
+    to right,
+    color-mix(in oklab, var(--brand) 55%, transparent),
+    color-mix(in oklab, var(--brand-2) 40%, transparent) 35%,
+    var(--line) 75%,
+    transparent
+  );
+}
+
+/* 主按钮：实色块在深色底上像一枚贴纸，渐变才像"发光的东西" */
+@utility btn-brand {
+  background-image: linear-gradient(105deg, var(--brand), var(--brand-2));
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    0 8px 20px -10px color-mix(in oklab, var(--brand) 75%, transparent);
+}
+
+/* 导航当前项：下划线跟着品牌色走，比整条灰线更有指向性 */
+@utility nav-underline {
+  background-image: linear-gradient(
+    to right,
+    color-mix(in oklab, var(--brand) 70%, transparent),
+    var(--brand-2)
+  );
 }
 
 /* ==========================================================================
@@ -236,6 +382,27 @@
 
 .prose-note > * + * {
   margin-top: 1.2em;
+}
+
+.prose-note h1 {
+  margin-top: 2.2em;
+  margin-bottom: 0.7em;
+  font-size: var(--text-h1);
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+
+.prose-note h4,
+.prose-note h5,
+.prose-note h6 {
+  margin-top: 1.8em;
+  margin-bottom: 0.5em;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--fg);
 }
 
 .prose-note h2 {

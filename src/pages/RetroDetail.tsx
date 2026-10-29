@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { mdxComponents } from '@/components/mdx/registry'
 import { ReadingProgress } from '@/components/notes/ReadingProgress'
 import { Toc } from '@/components/notes/Toc'
+import { PageWash } from '@/components/common/PageWash'
 import { Badge } from '@/components/ui/Badge'
 import { RelatedReading } from '@/components/notes/RelatedReading'
 import { formatDate, getRelatedEntries, getRetro, retroContent } from '@/lib/content'
@@ -34,6 +35,7 @@ export default function RetroDetail() {
 
   return (
     <>
+      <PageWash tone="retro" />
       <ReadingProgress />
 
       <div className="page-shell py-10 sm:py-14">

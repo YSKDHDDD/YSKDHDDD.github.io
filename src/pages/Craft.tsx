@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Boxes, Code2, Images, Sparkles } from 'lucide-react'
 import DecryptedText from '@/components/effects/DecryptedText'
+import { PageWash } from '@/components/common/PageWash'
 import Dock, { type DockItemData } from '@/components/effects/Dock'
 import GlowBorder from '@/components/effects/GlowBorder'
 import GradientWaves from '@/components/effects/GradientWaves'
@@ -88,8 +89,9 @@ export default function Craft() {
 
   return (
     <div className="page-shell py-12 sm:py-16">
+      <PageWash tone="craft" />
       <header className="max-w-[56ch]">
-        <p className="font-mono text-label tracking-[0.14em] text-faint">CRAFT</p>
+        <p className="font-mono text-label tracking-[0.14em] text-brand-2">CRAFT</p>
         <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">工艺</h1>
         <p className="mt-3 text-body text-muted">
           这里放的是效果的「证据」，不是效果本身。每个都标注了用了什么、为什么留，
