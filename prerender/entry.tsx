@@ -16,8 +16,21 @@ import { SITE } from '@/lib/site'
  * 所以拿到的 HTML 是完整的正文，而不是一堆 loading 占位。
  */
 
-/** 要生成静态 HTML 的路径。全站只有这里一处路由清单，由内容索引推导 */
-export function getStaticPaths(): { path: string; priority: number; changefreq: string }[] {
+/**
+ * 要生成静态 HTML 的路径。全站只有这里一处路由清单，由内容索引推导。
+ *
+ * `noindex` 的条目照样要产出 HTML（没有真实文件，直接访问就是 404），
+ * 但会被 sitemap 跳过 —— 两者要求不同，别混成一个开关。
+ */
+export interface StaticPath {
+  path: string
+  priority: number
+  changefreq: string
+  /** 不写进 sitemap：页面上已经声明了 noindex，再提交给爬虫是自相矛盾 */
+  noindex?: boolean
+}
+
+export function getStaticPaths(): StaticPath[] {
   return [
     { path: '/', priority: 1.0, changefreq: 'weekly' },
     { path: '/me', priority: 0.9, changefreq: 'monthly' },
@@ -26,6 +39,12 @@ export function getStaticPaths(): { path: string; priority: number; changefreq: 
     { path: '/import', priority: 0.6, changefreq: 'monthly' },
     ...notes.map((note) => ({ path: `/notes/${note.slug}`, priority: 0.7, changefreq: 'monthly' })),
     ...retros.map((retro) => ({ path: `/retro/${retro.slug}`, priority: 0.6, changefreq: 'monthly' })),
+    /*
+      本地文档的阅读页：id 在 query 里，所以只需要一个 /local 的真实文件。
+      没有它，/local?id=xxx 会落到 404.html，状态码 404、标题「页面不存在」，
+      刷新必闪一下 —— 这正是它上一版（/local/:id）的问题。
+    */
+    { path: '/local', priority: 0.1, changefreq: 'yearly', noindex: true },
     { path: '/craft', priority: 0.5, changefreq: 'monthly' },
     { path: '/about', priority: 0.5, changefreq: 'yearly' },
   ]

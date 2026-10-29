@@ -80,7 +80,7 @@ export default function Notes() {
     }))
     const local: Row[] = localDocs.map((doc) => ({
       slug: doc.id,
-      href: `/local/${doc.id}`,
+      href: `/local?id=${doc.id}`,
       local: true,
       meta: {
         title: doc.title,

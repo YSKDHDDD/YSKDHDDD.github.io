@@ -64,9 +64,14 @@ for (const route of routes) {
     process.exit(1)
   }
 
-  // 预渲染最容易出的另一个问题是「生成了，但内容是空的」
+  /*
+    预渲染最容易出的另一个问题是「生成了，但内容是空的」。
+    但 noindex 页是例外：/local 的正文要等浏览器读到 IndexedDB 才有，
+    静态 HTML 里只可能是一句空态说明。对它跳过字数检查，
+    上面两项（Suspense 占位、骨架 fallback）仍然生效 —— 那两个才是"渲染没跑完"。
+  */
   const textLength = html.replace(/<[^>]+>/g, '').trim().length
-  if (textLength < 200) {
+  if (textLength < 200 && !route.noindex) {
     console.error(`✗ ${route.path} 渲染出的正文只有 ${textLength} 字符，疑似空页`)
     process.exit(1)
   }
@@ -118,7 +123,7 @@ const newest = feed[0]
 const sitemap = [
   '<?xml version="1.0" encoding="UTF-8"?>',
   '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-  ...routes.map((route) => {
+  ...routes.filter((route) => !route.noindex).map((route) => {
     const entry = feed.find((item) => item.path === route.path)
     const lastmod = entry?.updated ?? newest?.updated
     return [

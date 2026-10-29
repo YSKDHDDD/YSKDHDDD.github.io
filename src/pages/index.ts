@@ -34,7 +34,7 @@ const routeLoaders: Record<string, () => Promise<unknown>> = {
   '/me': () => import('./Me'),
   '/notes': () => import('./Notes'),
   '/notes/:slug': () => import('./NoteDetail'),
-  '/local/:id': () => import('./LocalDoc'),
+  '/local': () => import('./LocalDoc'),
   '/import': () => import('./Import'),
   '/retro': () => import('./Retro'),
   '/retro/:slug': () => import('./RetroDetail'),
@@ -47,7 +47,9 @@ const preloaded = new Set<string>(['/'])
 /** 把具体路径归一成 loader key：/notes/xxx → /notes/:slug，/notes/ → /notes */
 function loaderKey(pathname: string): string {
   if (pathname.startsWith('/notes/')) return '/notes/:slug'
-  if (pathname.startsWith('/local/')) return '/local/:id'
+  // id 走 query（/local?id=xxx），所以不再是 /local/xxx 这种带段的形式；
+  // 但旧地址也要能预热，否则从书签点进来会白一帧
+  if (pathname.startsWith('/local')) return '/local'
   if (pathname.startsWith('/retro/')) return '/retro/:slug'
   return pathname.replace(/\/+$/, '') || '/'
 }

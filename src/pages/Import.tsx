@@ -197,7 +197,7 @@ export default function ImportPage() {
               >
                 <Check className="h-4 w-4 shrink-0 text-evergreen" aria-hidden />
                 <Link
-                  to={`/local/${doc.id}`}
+                  to={`/local?id=${doc.id}`}
                   className="min-w-0 flex-1 truncate text-meta text-fg transition-colors hover:text-brand-2"
                 >
                   {doc.title}
@@ -207,7 +207,7 @@ export default function ImportPage() {
                   <span className="text-label text-decision">{warnings.join('；')}</span>
                 ) : null}
                 <Link
-                  to={`/local/${doc.id}`}
+                  to={`/local?id=${doc.id}`}
                   className="inline-flex items-center gap-1 text-label text-brand-2 hover:underline"
                 >
                   打开
@@ -250,7 +250,7 @@ export default function ImportPage() {
                   <FileText className="h-4 w-4 shrink-0 text-faint" aria-hidden />
 
                   <Link
-                    to={`/local/${doc.id}`}
+                    to={`/local?id=${doc.id}`}
                     className="min-w-0 flex-1 truncate text-meta text-fg transition-colors hover:text-brand-2"
                   >
                     {doc.title}

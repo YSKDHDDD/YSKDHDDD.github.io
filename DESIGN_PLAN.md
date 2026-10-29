@@ -439,7 +439,7 @@ JS/CSS 资源 200；`rss.xml` / `sitemap.xml` 里的绝对地址都带子路径�
 
 ### 14.2 导入：本地 markdown 进同一个库
 
-`/import` → IndexedDB（`exoself` / `docs`）→ `/notes` 合并列表 → `/local/:id` 阅读。
+`/import` → IndexedDB（`exoself` / `docs`）→ `/notes` 合并列表 → `/local?id=` 阅读。
 没有后端、没有账号、没有上传接口：文件读进内存、存进浏览器、到此为止。
 
 - **运行时渲染器**：`src/lib/markdown.ts`，手写，不装 marked。策略是
@@ -449,7 +449,7 @@ JS/CSS 资源 200；`rss.xml` / `sitemap.xml` 里的绝对地址都带子路径�
   主题归「工程」，成熟度归「萌芽」。
 - **同文件重复导入覆盖而非堆叠**：id 由「文件名 + 正文长度 + 前 400 字」哈希得出。
 - **接入范围**：`/notes` 列表（带「本地」标记、参与主题/成熟度/标签筛选）、
-  ⌘K 面板的「本地」分组、`/local/:id` 阅读页（目录、进度条、导出、删除）。
+  ⌘K 面板的「本地」分组、`/local?id=` 阅读页（目录、进度条、导出、删除）。
 - **hydration 纪律**：`useLocalDocs` 的初始值恒为 `[]`，读完 IndexedDB 再 `set`。
   服务端读不到 IndexedDB，任何"首次渲染就带上本地文档"的写法都会让 React 丢掉整段 DOM。
 - **面板是常驻挂载的**：在 `/import` 导入完再按 ⌘K，组件不会重挂，
@@ -471,5 +471,5 @@ JS/CSS 资源 200；`rss.xml` / `sitemap.xml` 里的绝对地址都带子路径�
 
 `tsc` 0 错 · `eslint` 干净 · 构建 15 页 + 404 · `smoke` ALL RENDER。
 CDP 端到端实跑：塞文件 → 落库 1 条 → `/notes` 变 7 篇且置顶带「本地」→
-`/local/:id` 渲染出 h2/表格/围栏代码/引用/嵌套列表且 `script` 数为 0 →
+`/local?id=` 渲染出 h2/表格/围栏代码/引用/嵌套列表且 `script` 数为 0 →
 ⌘K 搜「第二次」命中「本地」组 → 删除后回到空态。1440 / 390、深浅两套主题均实拍。

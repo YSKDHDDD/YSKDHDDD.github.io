@@ -170,7 +170,7 @@ export function CommandPalette({
         hint: '本地',
         keywords: `${doc.tags.join(' ')} ${doc.summary} 本地 导入`,
         icon: <FileText className="h-4 w-4" aria-hidden />,
-        run: () => navigate(`/local/${doc.id}`),
+        run: () => navigate(`/local?id=${doc.id}`),
       })
     }
 

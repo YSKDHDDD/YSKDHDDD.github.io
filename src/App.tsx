@@ -30,7 +30,7 @@ export default function App() {
           <Route path="me" element={<Me />} />
           <Route path="notes" element={<Notes />} />
           <Route path="notes/:slug" element={<NoteDetail />} />
-          <Route path="local/:id" element={<LocalDoc />} />
+          <Route path="local" element={<LocalDoc />} />
           <Route path="retro" element={<Retro />} />
           <Route path="retro/:slug" element={<RetroDetail />} />
           <Route path="import" element={<ImportPage />} />

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Download, HardDrive, Trash2 } from 'lucide-react'
 import { PageWash } from '@/components/common/PageWash'
 import { ReadingProgress } from '@/components/notes/ReadingProgress'
@@ -20,7 +20,17 @@ import { topicTone } from '@/lib/tone'
  * 取舍很明确：导入的东西必须"立刻能读"，不为了一次高亮去背一个语言包。
  */
 export default function LocalDocPage() {
-  const { id = '' } = useParams()
+  /*
+    id 走 query 而不是路径段（/local?id=xxx），这是有代价权衡过的选择。
+
+    路径段版本 /local/abc123 在静态托管上没有对应的真实文件，GitHub Pages 只能
+    返回 404.html —— 页面靠里面的应用壳能显示出来，但状态码是 404，标题是
+    「页面不存在」，刷新必闪一下。换成 query 之后 /local/ 是个真实目录，
+    200 且标题正确。代价是地址看起来不像一篇文档的固定链接，但本地文档本来就
+    只在这台设备上，本来也不该被当成可分享的地址。
+  */
+  const [params] = useSearchParams()
+  const id = params.get('id') ?? ''
   const navigate = useNavigate()
   const { docs, ready } = useLocalDocs()
 
@@ -29,6 +39,28 @@ export default function LocalDocPage() {
     () => (doc ? renderMarkdown(stripTitleHeading(doc.body, doc.title)) : null),
     [doc],
   )
+
+  // 没有 id 是构建期就能确定的状态（预渲染出来的就是这一版），所以先判它，
+  // 渲染成人话而不是骨架条 —— 否则静态产物里会永久留着一个 aria-busy
+  if (!id) {
+    return (
+      <div className="page-shell py-24 text-center">
+        <p className="font-mono text-label text-faint">LOCAL</p>
+        <h1 className="mt-3 text-h2 text-fg">没有指定要打开哪篇文档</h1>
+        <p className="mx-auto mt-3 max-w-[42ch] text-meta text-muted">
+          本地文档的地址里带着一个只属于这台设备的 id。从笔记库或导入页点进来，地址才是完整的。
+        </p>
+        <div className="mt-6 flex items-center justify-center gap-4 text-meta">
+          <Link to="/notes" className="text-brand-2 hover:underline">
+            去笔记库看看
+          </Link>
+          <Link to="/import" className="text-muted hover:text-fg">
+            导入一篇
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (!ready) {
     return (
