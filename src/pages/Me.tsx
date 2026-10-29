@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowRight, ArrowUpRight, Layers, Mail, PenLine, User } from 'lucide-react'
 import badgePortrait from '@/assets/badge-portrait.webp'
+import rooftopSunset from '@/assets/rooftop-sunset.webp'
 import sunsetSky from '@/assets/sunset-sky.webp'
 import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
 import DecayCard from '@/components/effects/DecayCard'
@@ -297,26 +298,35 @@ export default function Me() {
 
       {/* ---------- 段间：一句立场，用整屏展开的图说 ---------- */}
       <section aria-label="我的看法">
+        {/*
+          起始框跟着图片来源走：这是一张 16:9 的截图，还按 40×58 的竖幅起，
+          中间只框得住那台售货机 —— 主体（坐在椅子上的人）整块在框外。
+          改成 66×46 的横幅起手，mediaZoom 收到 1（原图细节多，1.35 一进来就只剩售货机），
+          再配合 Me.css 里 68% 的取景偏置 —— 起点就能框住「售货机 + 整张椅子」，
+          剩下的天台靠滚动推开。
+        */}
         <ScrollExpand
           useWindowScroll
-          src={`${BASE}me-cover.svg`}
-          alt="一张抽象的界面剖面：深色底上的极光、栅格与十字准线"
+          src={rooftopSunset}
+          alt="黄昏的天台：一位短发角色坐在折叠椅上，身后是亮着红光的自动售货机、栏杆和城市天际线"
           scrollHint="继续滚动"
-          startWidth={40}
-          startHeight={58}
+          startWidth={66}
+          startHeight={46}
+          mediaZoom={1}
           startRadius={20}
           scrollDistance={1.1}
           holdDistance={0.2}
           smoothing={0.08}
         >
           {/* 不传 title：它和 children 都是 inset-0 居中，同时给会叠在一起 */}
-          <div className="max-w-[30ch]">
+          {/* 字压在照片上：照片比原来的示意图亮也更碎，靠 text-shadow 兜住对比度，不改图本身 */}
+          <div className="max-w-[34rem] [text-shadow:0_2px_20px_rgba(0,0,0,0.6)]">
             <p className="text-[clamp(1.6rem,3.6vw,2.6rem)] leading-[1.2] font-medium tracking-[-0.02em] text-white">
               细节不是加出来的，
               <br />
               是砍剩下的。
             </p>
-            <p className="mt-5 text-[14px] leading-relaxed text-white/70">
+            <p className="mx-auto mt-5 max-w-[42ch] text-[14px] leading-relaxed text-white/80">
               这一页用了九个效果，任意一屏都不会同时跑两个。删掉的比留下的多，界面才开始有形状。
             </p>
           </div>

@@ -178,6 +178,43 @@ body:has(.me) footer {
   padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
 }
 
+/*
+ * 照片比原来的示意图亮得多，也碎得多，14px 的副文案压上去就发糊。
+ * 只在文字所在的那一块补一层圆形暗角（跟着 overlay 的淡入一起出现），
+ * 不整体压暗 —— 满屏时图本身还是要亮的。
+ */
+.me .scroll-expand__overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(58% 46% at 50% 50%, rgba(0, 0, 0, 0.52), rgba(0, 0, 0, 0) 74%);
+}
+
+/*
+ * 照片比原来的示意图亮得多，也碎得多，14px 的副文案压上去就发糊。
+ * 只在文字所在的那一块补一层圆形暗角（跟着 overlay 的淡入一起出现），
+ * 不整体压暗 —— 满屏时图本身还是要亮的。
+ */
+.me .scroll-expand__overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(58% 46% at 50% 50%, rgba(0, 0, 0, 0.52), rgba(0, 0, 0, 0) 74%);
+}
+
+/**
+ * ScrollExpand 那张照片的取景：原图 16:9，主体（椅子上的人）落在右侧六成位置，
+ * 而起始小窗是居中的 —— 不挪 object-position 的话，框里只剩那台售货机。
+ * 68% 让起点就框住「售货机 + 人」；展开到满屏时左边多切掉一条，那儿本来只有地面。
+ */
+.me .scroll-expand__media {
+  object-position: 68% 50%;
+}
+
 /* ---------- 降级 ---------- */
 
 @media (prefers-reduced-motion: reduce) {
