@@ -118,7 +118,7 @@ ReactBits 的效果是**素材**，不是风格。如果每个区块都挂一个
 | `/craft` | `Dock` / `ScrollExpand` / `GradientWaves` | 展品 | 默认**静帧**，hover / focus / 点击后才跑；每格标注"用了什么、为什么" |
 | `/craft` 交互展位 | `TiltCard` / `MagneticButton` / `GlowBorder` | 展品 | 前两个指针驱动、hover 才动；`GlowBorder` 是常驻的，但只在展位里跑。三者都不得出现在列表页或阅读页 |
 | `/me` 首屏 | `LanyardBadge` | 身份：工牌是可抓的，不是一行"你好，我是…" | 物理在 `lanyardPhysics.ts`（可脱离 DOM 逐帧跑，`scripts/lanyard-feel.ts` 出数字）：牵引式拖拽、松手会甩、摆角是欠阻尼弹簧，**静止即停帧**；`md` 以下不挂载（首屏没位置，会被常驻 Dock 切半）；`prefers-reduced-motion` 下不启动循环；有照片时是**双面卡**——正面整幅照片、背面才是信息，点一下翻面（位移过 6px 算拖拽，不判时长），翻面放在卡里另一层 `.lanyard__flip`，因为卡的 `transform` 每帧被物理重写；照片 560×868 webp（62KB）、`loading=lazy`，窄屏卡不挂载也就不会下载 |
-| `/me` 收尾 | `DecayCard`（reactbits 原版） | 告别：一张会散开的图，比再加一行链接有分量 | 参数全是官方默认值：`intensity .5 / sensitivity .5 / recovery .6 / idle .35 / travel 50 / tilt 10 / scope window`。画布比卡面大 12.4% 给撕裂留余量，照片再内缩 8.33%；simplex 叠成湍流按指针速度推开采样坐标，边缘先烂、主体还认得出来。`scope=window` 意味着鼠标在页面任何地方动都能撕；停下 0.6s 合回，没人碰时边缘也一直轻轻起毛。卡会跟着指针漂 ~64px、转 ±10°，右侧留 5rem 余量，1024 下不被切；`prefers-reduced-motion` 下不漂不转（原版行为）；`lg` 以下不挂载（触屏没有「指针速度」这个输入）；图是中段那张抽象封面的竖幅重排（600×800 webp，10KB） |
+| `/me` 收尾 | `DecayCard`（reactbits 原版） | 告别：一张会散开的图，比再加一行链接有分量 | 参数全是官方默认值：`intensity .5 / sensitivity .5 / recovery .6 / idle .35 / travel 50 / tilt 10 / scope window`。画布比卡面大 12.4% 给撕裂留余量，照片再内缩 8.33%；simplex 叠成湍流按指针速度推开采样坐标，边缘先烂、主体还认得出来。`scope=window` 意味着鼠标在页面任何地方动都能撕；停下 0.6s 合回，没人碰时边缘也一直轻轻起毛。卡会跟着指针漂 ~64px、转 ±10°，右侧留 5rem 余量，1024 下不被切；`prefers-reduced-motion` 下不漂不转（原版行为）；`lg` 以下不挂载（触屏没有「指针速度」这个输入）；图换成了站点主人的一张傍晚火烧云（600×800 webp，61KB）：橙金与靛蓝交错的鱼鳞天，底部一排树梢与吊臂剪影 —— 亮部多、层次密，撕开时错位最看得见 |
 | 404 | `GradientWaves` | 稀缺点位 | 全屏，一年见一次 |
 | 阅读页 | 无 | — | 只有进度条与 TOC 高亮 |
 
@@ -557,3 +557,10 @@ CDP 实拍：1440 深色（静置 / 指针扫过显出彩色）、1440 浅色、
 `tsc` 0 错 · `eslint` 干净 · 构建 16 页 + 404 · `smoke` ALL RENDER。
 CDP 实拍：1440 深色（静置 / 快速划过撕裂 / 1.2s 后合回）、1440 浅色、
 1024（`scrollWidth = 1024`，无横向溢出，卡不被切）。
+
+### 16.3 换了一张图（同日）
+
+原来用的是中段那张抽象封面（深色、留白多），撕裂时错位的只是几块色域，看不太出来。
+换成一张真实的傍晚火烧云：橙金与靛蓝交错的鱼鳞天，底部一排树梢与吊臂剪影 ——
+亮部多、层次密，一格错位就看得见。600×800 webp / 61KB，跟卡面 3:4 同比例裁切，
+DPR2 下正好一个像素对一个像素。素材名跟着内容走：`contact-cover.webp` → `sunset-sky.webp`。

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowRight, ArrowUpRight, Layers, Mail, PenLine, User } from 'lucide-react'
 import badgePortrait from '@/assets/badge-portrait.webp'
-import contactCover from '@/assets/contact-cover.webp'
+import sunsetSky from '@/assets/sunset-sky.webp'
 import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
 import DecayCard from '@/components/effects/DecayCard'
 import DecryptedText from '@/components/effects/DecryptedText'
@@ -371,8 +371,8 @@ export default function Me() {
             */}
             <div className="me-cover-card hidden lg:block">
               {showPortrait ? (
-                <div role="img" aria-label="一张抽象的界面剖面：深色底上的紫色光点、同心圆与地平线">
-                  <DecayCard image={contactCover} width={300} height={400} radius={12} />
+                <div role="img" aria-label="傍晚的火烧云：橙金与靛蓝交错的鱼鳞天，画面底部压着一排树梢与吊臂的剪影">
+                  <DecayCard image={sunsetSky} width={300} height={400} radius={12} />
                 </div>
               ) : null}
               <p className="me-cover-card__hint">把指针放上去</p>
