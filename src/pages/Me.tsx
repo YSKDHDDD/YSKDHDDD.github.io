@@ -113,8 +113,9 @@ export default function Me() {
    * 收尾那张人像卡按断点挂载：它下面没有别的内容，晚一步出现没人看得见，
    * 而窄屏上省掉的是 38KB。首屏的工牌不这么办 —— 它在折叠线以上，
    * 预渲染产物里就得有，否则桌面首帧会空出右边那一栏。
+   * 断点值另外给段间那张图用：桌面竖构图起手、手机横幅起手（见下面 ScrollExpand）。
    */
-  const showPortrait = useMediaQuery('(min-width: 1024px)')
+  const isWide = useMediaQuery('(min-width: 1024px)')
 
   const jump = (id: string) => {
     const el = document.getElementById(id)
@@ -299,20 +300,21 @@ export default function Me() {
       {/* ---------- 段间：一句立场，用整屏展开的图说 ---------- */}
       <section aria-label="我的看法">
         {/*
-          起始框跟着图片来源走：这是一张 16:9 的截图，还按 40×58 的竖幅起，
-          中间只框得住那台售货机 —— 主体（坐在椅子上的人）整块在框外。
-          改成 66×46 的横幅起手，mediaZoom 收到 1（原图细节多，1.35 一进来就只剩售货机），
-          再配合 Me.css 里 68% 的取景偏置 —— 起点就能框住「售货机 + 整张椅子」，
-          剩下的天台靠滚动推开。
+          起手框的形状得跟「视口方向」匹配，不然切出来的是条横穿的切片：
+          桌面 1440×900 下，66×46 得到 950×414 的窗（2.3:1），正从人物腰部横切过去，
+          左边还空出三成栏杆。而这张图的人物在画面 63% 处，cover 在这个尺寸下横向只能挪
+          238px，不缩放根本挪不到中间 —— 所以桌面改成 48×68 的竖构图 + mediaZoom 1.25：
+          图上多出来的那圈余量让画面能横移，人物才被框正。
+          手机是竖屏，横幅起手本来就不合适，保持 66×46 + zoom 1，取景偏置交给 Me.css。
         */}
         <ScrollExpand
           useWindowScroll
           src={rooftopSunset}
           alt="黄昏的天台：一位短发角色坐在折叠椅上，身后是亮着红光的自动售货机、栏杆和城市天际线"
           scrollHint="继续滚动"
-          startWidth={66}
-          startHeight={46}
-          mediaZoom={1}
+          startWidth={isWide ? 48 : 66}
+          startHeight={isWide ? 68 : 46}
+          mediaZoom={isWide ? 1.25 : 1}
           startRadius={20}
           scrollDistance={1.1}
           holdDistance={0.2}
@@ -380,7 +382,7 @@ export default function Me() {
               lg 以下不挂载：触屏没有「指针速度」这个输入，撕裂就退化成一张普通照片。
             */}
             <div className="me-cover-card hidden lg:block">
-              {showPortrait ? (
+              {isWide ? (
                 <div role="img" aria-label="傍晚的火烧云：橙金与靛蓝交错的鱼鳞天，画面底部压着一排树梢与吊臂的剪影">
                   <DecayCard image={sunsetSky} width={300} height={400} radius={12} />
                 </div>

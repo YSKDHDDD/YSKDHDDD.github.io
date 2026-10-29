@@ -100,7 +100,11 @@ const ScrollExpand: React.FC<ScrollExpandProps> = ({
     };
   });
 
+  // 记住最后一次进度：断点切换时起手框参数会变，但滚动位置没变，得按新参数重画
+  const progressRef = useRef(0);
+
   const applyProgress = useCallback((p: number) => {
+    progressRef.current = p;
     const frame = frameRef.current;
     const media = mediaRef.current;
     if (!frame || !media) return;
@@ -224,6 +228,15 @@ const ScrollExpand: React.FC<ScrollExpandProps> = ({
       ro.disconnect();
     };
   }, [applyProgress, useWindowScroll]);
+
+  /*
+   * 起手框的尺寸/缩放可能是按断点传的（桌面竖构图、手机横幅）。
+   * 断点一变参数就变，但滚动位置没变 —— 不在这里补一次重画，画面会停在旧参数上，
+   * 要等用户再滚一下才更新，首帧就是错的。
+   */
+  useEffect(() => {
+    applyProgress(progressRef.current);
+  }, [applyProgress, startWidth, startHeight, startRadius, endRadius, mediaZoom]);
 
   const media =
     mediaType === 'video' ? (
