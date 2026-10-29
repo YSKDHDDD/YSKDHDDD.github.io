@@ -1,9 +1,9 @@
+import { lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
-import archivePlate from '@/assets/archive-plate.webp'
+import chromeHead from '@/assets/chrome-head.jpg'
 import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
 import DecryptedText from '@/components/effects/DecryptedText'
-import { DitherPlate } from '@/components/effects/DitherPlate'
 import { Reveal } from '@/components/effects/Reveal'
 import { SectionHeading } from '@/components/common/SectionHeading'
 import { NoteRow } from '@/components/notes/NoteRow'
@@ -13,6 +13,13 @@ import { formatDate, notes, nowItems, retros } from '@/lib/content'
 
 // 构建期常量（vite define 注入）：判断「本月新增」不能跟着用户访问时间漂移
 const monthPrefix = __BUILD_DATE__.slice(0, 7)
+
+/*
+ * ogl + 两张全屏通道是站里最重的一个模块，而它只在首页出现。
+ * 拆成独立分包，别的页面（笔记、复盘）就不必为它付带宽；首帧是画框里的墨色，
+ * 恰好和组件的进场（从墨色里一格一格显影）接得上，所以看不出「在等」。
+ */
+const DitherVeil = lazy(() => import('@/components/effects/DitherVeil'))
 
 const craftTiles = [
   { name: 'SoftAurora', tech: 'WebGL 片元着色器', hint: '首屏背景，空闲后加载', href: '/craft#soft-aurora' },
@@ -30,8 +37,8 @@ export default function Home() {
       <section className="relative isolate overflow-hidden">
         <AuroraBackdrop />
 
-        <div className="page-shell relative pt-16 pb-20 sm:pt-24 sm:pb-28">
-          <div className="grid gap-12 lg:grid-cols-[1.5fr_0.7fr] lg:items-end">
+        <div className="page-shell relative pt-14 pb-10 sm:pt-20 sm:pb-14">
+          <div className="grid items-center gap-10 lg:grid-cols-[1.12fr_0.88fr] lg:gap-14">
             <div>
               <p className="font-mono text-label tracking-[0.14em] text-faint">
                 学习外脑 · LEARNING EXOSELF
@@ -85,75 +92,59 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 活的细节：数据都是真的，才叫细节 */}
-            <Reveal as="aside" className="rounded-md border border-line bg-surface/40 p-4 backdrop-blur-sm">
-              <p className="text-label tracking-[0.08em] text-faint">现在</p>
-              <dl className="mt-3 space-y-2.5 font-mono text-label">
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-faint">最近更新</dt>
-                  <dd className="text-fg">{formatDate(latest.meta.updated)}</dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-faint">本月新增</dt>
-                  <dd className="text-fg">{thisMonth} 篇</dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-faint">累计</dt>
-                  <dd className="text-fg">
-                    {notes.length} 笔记 / {retros.length} 复盘
-                  </dd>
-                </div>
-              </dl>
-              <p className="mt-4 border-t border-line pt-3 text-label leading-relaxed text-faint">
-                {latest.meta.title}
-              </p>
-            </Reveal>
+            {/*
+              首屏的图：reactbits 的 DitherVeil 原样搬过来。
+              参数一个没改 —— 用它的默认值，因为「像不像原版」不取决于我怎么调，
+              而取决于管线有没有动过。画框固定高度，里面 contain，黑的就留给墨色。
+            */}
+            <figure className="relative">
+              <div
+                role="img"
+                aria-label="虹彩金属头像被压成一比特网点，指针扫过的地方显出原色"
+                className="relative h-[clamp(360px,44vw,580px)] overflow-hidden rounded-md border border-line bg-[#120f17]"
+              >
+                <Suspense fallback={null}>
+                  <DitherVeil src={chromeHead} className="h-full w-full" />
+                </Suspense>
+              </div>
+              <figcaption className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 font-mono text-label text-faint">
+                <span>移过画面，颜色回来</span>
+                <a
+                  href="https://reactbits.dev/c/animations/dither-veil"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="transition-colors hover:text-brand-2"
+                >
+                  DitherVeil ↗
+                </a>
+              </figcaption>
+            </figure>
           </div>
+
+          {/* 活的细节：数据都是真的，才叫细节 */}
+          <Reveal
+            as="aside"
+            className="mt-10 flex flex-wrap items-baseline gap-x-6 gap-y-2 border-t border-line pt-4 font-mono text-label text-faint"
+          >
+            <span className="tracking-[0.08em]">现在</span>
+            <span>
+              最近更新 <span className="text-fg">{formatDate(latest.meta.updated)}</span>
+            </span>
+            <span>
+              本月新增 <span className="text-fg">{thisMonth} 篇</span>
+            </span>
+            <span>
+              累计{' '}
+              <span className="text-fg">
+                {notes.length} 笔记 / {retros.length} 复盘
+              </span>
+            </span>
+            <span className="w-full truncate opacity-80 sm:ml-auto sm:w-auto">{latest.meta.title}</span>
+          </Reveal>
         </div>
       </section>
 
-      <div className="page-shell space-y-24 pb-8">
-        {/*
-          图版：一个不编号的插页。
-          首页 01–04 是可数的节奏，这块刻意的例外 —— 它不承载信息，只承载「这个站愿意
-          为一张图写一个着色器」。编号一旦加上，读者就会去找它和 01 的关系，而它没有。
-        */}
-        <section aria-label="图版">
-          <Reveal>
-            <figure>
-              <DitherPlate
-                image={archivePlate}
-                alt="档案室：整墙的旧书，一盏黄铜台灯亮着，桌上摊开一本书"
-                className="h-[clamp(240px,32vw,440px)] w-full rounded-md border border-line"
-                /*
-                  图案选 lines（斜向雕刻线）而不是默认的 floyd：这张照片满是书脊的高频
-                  细节，误差扩散会把它打成白噪声；雕刻线是密度在变、方向不变，远看是
-                  一块有明暗的版画，近看才是一根根线。
-                  曝光也调过：原片平均亮度 0.22、中位数 0.19，直方图很窄，
-                  contrast 1.9 拉开它、brightness 0.42 抬到中间调，桌面才压得住、
-                  灯罩和书页才亮得起来。
-                */
-                pattern="lines"
-                pixelSize={2}
-                contrast={1.9}
-                brightness={0.42}
-                /* 半径要比图版高度小得多：260 时直径正好盖满整条，一扫就是「全亮」，没有笔迹 */
-                revealRadius={140}
-                softness={0.55}
-                linger={0.9}
-              />
-              <figcaption className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 font-mono text-label text-faint">
-                <span>
-                  图版 01 · 档案室 · <span className="dither-hint">扫过画面，颜色回来</span>
-                </span>
-                <Link to="/craft#dither-veil" className="transition-colors hover:text-brand-2">
-                  DitherVeil ↗
-                </Link>
-              </figcaption>
-            </figure>
-          </Reveal>
-        </section>
-
+      <div className="page-shell space-y-24 pt-16 pb-8">
         {/* 01 现在 */}
         <section aria-label="现在">
           <Reveal>
@@ -233,7 +224,7 @@ export default function Home() {
             <SectionHeading
               index="04"
               title="工艺"
-              hint="九个效果，一份滚动叙事；每个都标注了用了什么、为什么留"
+              hint="八个效果，一份滚动叙事；每个都标注了用了什么、为什么留"
               action={
                 <div className="flex items-center gap-4">
                   <Link
