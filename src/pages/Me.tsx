@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowRight, ArrowUpRight, Layers, Mail, PenLine, User } from 'lucide-react'
 import badgePortrait from '@/assets/badge-portrait.webp'
-import contactPortrait from '@/assets/contact-portrait.webp'
+import contactCover from '@/assets/contact-cover.webp'
 import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
 import DecayCard from '@/components/effects/DecayCard'
 import DecryptedText from '@/components/effects/DecryptedText'
@@ -361,32 +361,33 @@ export default function Me() {
             </div>
 
             {/*
-              收尾放一张会散开的照片：右半栏本来就空着，一个能抓的画面比再加一行链接有用。
-              只在 lg 起给：触屏没有「指针速度」这个输入，把人像压到小屏的正文里也不值当。
-              scope 用 card —— 页面别处的鼠标移动不该撕掉一张用户没在看的照片。
+              收尾放一张会散开的图：右半栏本来就空着，一个能抓的画面比再加一行链接有用。
+              用的是中段那张抽象封面的竖幅版 —— 同一套视觉，换个构图，不重复也不脱节。
+              只在 lg 起给：触屏没有「指针速度」这个输入，把它压到小屏的正文里也不值当。
+              scope 用 card —— 页面别处的鼠标移动不该撕掉一张用户没在看的图。
             */}
-            <div className="me-portrait hidden lg:block">
+            <div className="me-cover-card hidden lg:block">
               {showPortrait ? (
               <DecayCard
-                image={contactPortrait}
-                alt="一张室内的半身人像，浅褐色卷发，穿着花饰上衣"
+                image={contactCover}
+                alt="一张抽象的界面剖面：深色底上的紫色光点、同心圆与地平线"
                 width={320}
                 height={427}
                 radius={10}
                 scope="card"
-                intensity={0.38}
+                intensity={0.22}
                 sensitivity={0.55}
                 hoverDecay={0.06}
                 recovery={0.55}
-                idle={0.08}
+                idle={0.015}
                 grain={0.32}
-                detail={5}
-                pattern={4}
+                detail={3}
+                pattern={2.6}
                 travel={4}
                 tilt={5}
               />
               ) : null}
-              <p className="me-portrait__hint">把指针放上去</p>
+              <p className="me-cover-card__hint">把指针放上去</p>
             </div>
           </div>
         </div>

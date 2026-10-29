@@ -86,41 +86,30 @@
 }
 
 /**
- * 收尾那张会散开的照片。
+ * 收尾那张会散开的图卡。
  *
  * 卡片自己有 transform（朝指针漂移 + 倾斜），提示文字不能跟着漂，所以放在卡外面、
  * 单独一行。宽度按卡面宽度对齐，靠右收尾 —— 它贴着页面的右边界，和顶上那枚工牌
  * 一左一右把这一页夹住。
  */
-.me-portrait {
+.me-cover-card {
   /* 卡片会朝指针漂 ±20 多像素、还会转 5°，右边不留这段余量，1024 下就会顶到视口边上 */
   margin-inline-end: 1.75rem;
   justify-self: end;
 }
 
 /**
- * 卡片是按断点「挂不挂载」的（窄屏不下载那张 38KB），预渲染产物里这一栏是空的。
+ * 卡片是按断点「挂不挂载」的（窄屏不下载那张 9KB），预渲染产物里这一栏是空的。
  * 先用 CSS 把高度占住，桌面上 hydrate 之后卡片填进来，页面不会往下跳一截。
  * 数 = 卡 427 + 提示行高 ~21 + 间距 14。
  */
 @media (min-width: 1024px) {
-  .me-portrait {
+  .me-cover-card {
     min-height: 462px;
   }
 }
 
-/**
- * 卡片是按断点「挂不挂载」的（窄屏不下载那张 38KB），预渲染产物里这一栏是空的。
- * 先用 CSS 把高度占住，桌面上 hydrate 之后卡片填进来，页面不会往下跳一截。
- * 数 = 卡 427 + 提示行高 ~21 + 间距 14。
- */
-@media (min-width: 1024px) {
-  .me-portrait {
-    min-height: 462px;
-  }
-}
-
-.me-portrait__hint {
+.me-cover-card__hint {
   margin-top: 0.85rem;
   font-family: var(--font-mono);
   font-size: var(--text-label, 0.75rem);
