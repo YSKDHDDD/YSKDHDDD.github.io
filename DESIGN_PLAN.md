@@ -178,7 +178,7 @@ title: 从 13 个类型错误里读出的结构问题
 slug: reactbits-audit
 date: 2026-10-27
 updated: 2026-10-27
-topic: engineering          # engineering | design | tooling | reading
+topic: engineering          # engineering | design | tooling
 tags: [typescript, tailwind, refactor]
 status: evergreen           # seedling | growing | evergreen
 readingTime: 8

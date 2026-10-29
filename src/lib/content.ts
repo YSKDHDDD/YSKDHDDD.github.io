@@ -9,7 +9,7 @@ export { noteContent, retroContent } from '@/lib/bodies'
 
 /** 成熟度是这套外脑的灵魂字段：它让"长期维护"这件事变得可见 */
 export type NoteStatus = 'seedling' | 'growing' | 'evergreen'
-export type TopicId = 'engineering' | 'design' | 'tooling' | 'reading'
+export type TopicId = 'engineering' | 'design' | 'tooling'
 
 export interface TocItem {
   depth: number
@@ -105,7 +105,6 @@ export const topicLabels: Record<TopicId, string> = {
   engineering: '工程',
   design: '设计',
   tooling: '工具链',
-  reading: '阅读',
 }
 
 export const statusLabels: Record<NoteStatus, string> = {
