@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Boxes, Code2, Images, Sparkles } from 'lucide-react'
+import archivePlate from '@/assets/archive-plate.webp'
 import DecryptedText from '@/components/effects/DecryptedText'
+import DitherVeil from '@/components/effects/DitherVeil'
 import { PageWash } from '@/components/common/PageWash'
 import Dock, { type DockItemData } from '@/components/effects/Dock'
 import GlowBorder from '@/components/effects/GlowBorder'
@@ -233,6 +235,37 @@ export default function Craft() {
               边框是一维的，用不着 SVG 或 canvas。把角度注册成 `@property` 可插值变量，
               conic-gradient 的旋转就整段跑在合成器上，主线程零成本。渐变里留两段透明，
               光才有头和尾 —— 匀速旋转也因此带上了速度感。
+            </p>
+          </div>
+        </article>
+
+        <article
+          id="dither-veil"
+          className="scroll-mt-24 overflow-hidden rounded-md border border-line lg:col-span-2"
+        >
+          <div className="h-64 bg-bg">
+            <DitherVeil
+              image={archivePlate}
+              alt="档案室：整墙的旧书，一盏黄铜台灯亮着"
+              className="h-full w-full"
+              pattern="lines"
+              pixelSize={2}
+              contrast={1.9}
+              brightness={0.42}
+              revealRadius={150}
+              softness={0.55}
+              linger={0.9}
+            />
+          </div>
+          <div className="border-t border-line p-4">
+            <h2 className="font-mono text-meta text-fg">DitherVeil</h2>
+            <p className="mt-2 text-meta leading-relaxed text-muted">
+              两张全屏通道：第一张把指针扫过的笔迹画进半浮点离屏纹理，每帧自己减去一点，
+              减到零就织回网点；第二张按格子取色，拿阈值决定这格是墨还是纸。
+              阈值有五种来路，有序矩阵、蓝噪声、斜向雕刻线都在着色器里算；误差扩散
+              必须放在 CPU 上跑一次再缓存 —— 它是有状态的，误差挨着邻居往下传，
+              着色器里没法按格并行。上面这张用雕刻线而不是默认的 Floyd：这张照片
+              细节太密，误差扩散会打成白噪声，而线条是密度在变、方向不变。
             </p>
           </div>
         </article>

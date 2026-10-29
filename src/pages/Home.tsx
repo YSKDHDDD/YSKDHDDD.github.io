@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
+import archivePlate from '@/assets/archive-plate.webp'
 import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
 import DecryptedText from '@/components/effects/DecryptedText'
+import { DitherPlate } from '@/components/effects/DitherPlate'
 import { Reveal } from '@/components/effects/Reveal'
 import { SectionHeading } from '@/components/common/SectionHeading'
 import { NoteRow } from '@/components/notes/NoteRow'
@@ -111,6 +113,47 @@ export default function Home() {
       </section>
 
       <div className="page-shell space-y-24 pb-8">
+        {/*
+          图版：一个不编号的插页。
+          首页 01–04 是可数的节奏，这块刻意的例外 —— 它不承载信息，只承载「这个站愿意
+          为一张图写一个着色器」。编号一旦加上，读者就会去找它和 01 的关系，而它没有。
+        */}
+        <section aria-label="图版">
+          <Reveal>
+            <figure>
+              <DitherPlate
+                image={archivePlate}
+                alt="档案室：整墙的旧书，一盏黄铜台灯亮着，桌上摊开一本书"
+                className="h-[clamp(240px,32vw,440px)] w-full rounded-md border border-line"
+                /*
+                  图案选 lines（斜向雕刻线）而不是默认的 floyd：这张照片满是书脊的高频
+                  细节，误差扩散会把它打成白噪声；雕刻线是密度在变、方向不变，远看是
+                  一块有明暗的版画，近看才是一根根线。
+                  曝光也调过：原片平均亮度 0.22、中位数 0.19，直方图很窄，
+                  contrast 1.9 拉开它、brightness 0.42 抬到中间调，桌面才压得住、
+                  灯罩和书页才亮得起来。
+                */
+                pattern="lines"
+                pixelSize={2}
+                contrast={1.9}
+                brightness={0.42}
+                /* 半径要比图版高度小得多：260 时直径正好盖满整条，一扫就是「全亮」，没有笔迹 */
+                revealRadius={140}
+                softness={0.55}
+                linger={0.9}
+              />
+              <figcaption className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 font-mono text-label text-faint">
+                <span>
+                  图版 01 · 档案室 · <span className="dither-hint">扫过画面，颜色回来</span>
+                </span>
+                <Link to="/craft#dither-veil" className="transition-colors hover:text-brand-2">
+                  DitherVeil ↗
+                </Link>
+              </figcaption>
+            </figure>
+          </Reveal>
+        </section>
+
         {/* 01 现在 */}
         <section aria-label="现在">
           <Reveal>
@@ -190,7 +233,7 @@ export default function Home() {
             <SectionHeading
               index="04"
               title="工艺"
-              hint="八个效果，一份滚动叙事；每个都标注了用了什么、为什么留"
+              hint="九个效果，一份滚动叙事；每个都标注了用了什么、为什么留"
               action={
                 <div className="flex items-center gap-4">
                   <Link
