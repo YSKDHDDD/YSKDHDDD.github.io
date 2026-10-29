@@ -93,24 +93,30 @@
  * 一左一右把这一页夹住。
  */
 .me-cover-card {
-  /* 卡片会朝指针漂 ±20 多像素、还会转 5°，右边不留这段余量，1024 下就会顶到视口边上 */
-  margin-inline-end: 1.75rem;
+  /*
+   * 原版卡会朝指针漂（travel 50，soften 之后最多 ~64px）、还会转 ±10°，
+   * 300×400 的卡转 10° 时右边缘要多吃 ~36px。两个叠起来近百像素，
+   * 1024 下不留这段余量就会被 section 的 overflow 切掉一角。
+   */
+  margin-inline-end: 5rem;
   justify-self: end;
 }
 
 /**
- * 卡片是按断点「挂不挂载」的（窄屏不下载那张 9KB），预渲染产物里这一栏是空的。
+ * 卡片是按断点「挂不挂载」的（窄屏不下载那张 10KB），预渲染产物里这一栏是空的。
  * 先用 CSS 把高度占住，桌面上 hydrate 之后卡片填进来，页面不会往下跳一截。
- * 数 = 卡 427 + 提示行高 ~21 + 间距 14。
+ * 数 = 卡 400 + 提示行高 ~16 + 间距 14。
  */
 @media (min-width: 1024px) {
   .me-cover-card {
-    min-height: 462px;
+    min-height: 430px;
   }
 }
 
 .me-cover-card__hint {
   margin-top: 0.85rem;
+  /* 原版画布比卡面大 12.4%、照片再内缩 8.33%，提示行跟着照片的边对齐，而不是卡框 */
+  margin-inline: 8.33%;
   font-family: var(--font-mono);
   font-size: var(--text-label, 0.75rem);
   letter-spacing: 0.12em;

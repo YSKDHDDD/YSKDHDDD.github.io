@@ -118,7 +118,7 @@ ReactBits 的效果是**素材**，不是风格。如果每个区块都挂一个
 | `/craft` | `Dock` / `ScrollExpand` / `GradientWaves` | 展品 | 默认**静帧**，hover / focus / 点击后才跑；每格标注"用了什么、为什么" |
 | `/craft` 交互展位 | `TiltCard` / `MagneticButton` / `GlowBorder` | 展品 | 前两个指针驱动、hover 才动；`GlowBorder` 是常驻的，但只在展位里跑。三者都不得出现在列表页或阅读页 |
 | `/me` 首屏 | `LanyardBadge` | 身份：工牌是可抓的，不是一行"你好，我是…" | 物理在 `lanyardPhysics.ts`（可脱离 DOM 逐帧跑，`scripts/lanyard-feel.ts` 出数字）：牵引式拖拽、松手会甩、摆角是欠阻尼弹簧，**静止即停帧**；`md` 以下不挂载（首屏没位置，会被常驻 Dock 切半）；`prefers-reduced-motion` 下不启动循环；有照片时是**双面卡**——正面整幅照片、背面才是信息，点一下翻面（位移过 6px 算拖拽，不判时长），翻面放在卡里另一层 `.lanyard__flip`，因为卡的 `transform` 每帧被物理重写；照片 560×868 webp（62KB）、`loading=lazy`，窄屏卡不挂载也就不会下载 |
-| `/me` 收尾 | `DecayCard` | 告别：一张会散开的图，比再加一行链接有分量 | WebGL2 噪声域扭曲（simplex 叠成湍流推开采样坐标）。画布**等于**卡面 —— 原版留 1.24 倍画布、内容再内缩 8.33%，图比卡小一圈；纵向设计尺寸按实际宽高比推（`uCardH`），不再写死 4:5。指针速度决定撕裂、停下 0.55s 合回；中心只给 12% 位移，光点与圆环保持可读，烂掉的是轮廓；`scope=card`，页面别处的鼠标不该动它；`prefers-reduced-motion` 下不建 GL，就是一张静态图；`lg` 以下不挂载（触屏没有「指针速度」这个输入，也省掉 10KB）；图是中段那张抽象封面的**竖幅重排**（600×800 webp，10KB）—— 同色系、不同构图，全页同一张脸只出现一次 |
+| `/me` 收尾 | `DecayCard`（reactbits 原版） | 告别：一张会散开的图，比再加一行链接有分量 | 参数全是官方默认值：`intensity .5 / sensitivity .5 / recovery .6 / idle .35 / travel 50 / tilt 10 / scope window`。画布比卡面大 12.4% 给撕裂留余量，照片再内缩 8.33%；simplex 叠成湍流按指针速度推开采样坐标，边缘先烂、主体还认得出来。`scope=window` 意味着鼠标在页面任何地方动都能撕；停下 0.6s 合回，没人碰时边缘也一直轻轻起毛。卡会跟着指针漂 ~64px、转 ±10°，右侧留 5rem 余量，1024 下不被切；`prefers-reduced-motion` 下不漂不转（原版行为）；`lg` 以下不挂载（触屏没有「指针速度」这个输入）；图是中段那张抽象封面的竖幅重排（600×800 webp，10KB） |
 | 404 | `GradientWaves` | 稀缺点位 | 全屏，一年见一次 |
 | 阅读页 | 无 | — | 只有进度条与 TOC 高亮 |
 
@@ -523,3 +523,37 @@ mipmap 层级、半浮点遮罩在拿不到 `EXT_color_buffer_float` 时的回�
 `tsc` 0 错 · `eslint` 干净 · 构建 16 页 + 404 · `smoke` ALL RENDER。
 CDP 实拍：1440 深色（静置 / 指针扫过显出彩色）、1440 浅色、390 移动端
 （`scrollWidth = 390`，无横向溢出）。
+
+## 16. 会散开的那张卡：也改回原版（2026-10-29）
+
+### 起因
+
+和首屏那张网点照片同一个毛病：上一版 `DecayCard` 是照原版**重写**的 —— 画布改成正好等于卡面
+（理由是原版留 1.24 倍画布、内容内缩 8.33%，照片比卡小一圈、四边对不齐），设计空间按实际宽高比推，
+参数压到几乎不动（`intensity .22 / idle .015 / travel 4 / tilt 5 / scope card`）。
+结果它是一张「轻微抖动的图」，不是 reactbits 那个会散开的卡。
+
+### 16.1 换成了什么
+
+官方 `DecayCard.tsx` + `.css`（reactbits `src/ts-default/Components/DecayCard`）。
+着色器、常量、默认值一行没改；只做了三件事：去掉 `'use client'`、给空 `catch` 补注释、
+把渲染期写 `settingsRef` 挪进 `useLayoutEffect`（`react-hooks/refs`；时序不变，仍早于动画帧）。
+
+`/me` 收尾只传 `image / width 300 / height 400 / radius 12`，其余全默认：
+`scope=window`（鼠标在页面任何地方动都能撕）、`travel 50 / tilt 10`（卡跟着指针漂和倾斜）、
+`idle .35`（没人碰也一直起毛）、`recovery .6`。上一版那套「安静化」的调参全部删掉。
+
+`Me.css` 配套两处：
+
+1. 右侧留 `5rem`。原版漂移 soften 后最大 ~64px，300×400 的卡转 10° 右边缘还要多吃 ~36px；
+   1024 下不留这段余量，卡角会被 section 的 `overflow: hidden` 切掉。
+2. 提示行 `margin-inline: 8.33%`。原版照片内缩 8.33%，提示跟着照片的边对齐，而不是卡框。
+
+1.24 倍画布保留 —— 那圈透明边就是撕裂需要的空间。上一版把它裁掉换来「四边对齐」，
+代价是撕裂只能发生在画面内部：看着像在抖，不像在烂。
+
+### 16.2 验收
+
+`tsc` 0 错 · `eslint` 干净 · 构建 16 页 + 404 · `smoke` ALL RENDER。
+CDP 实拍：1440 深色（静置 / 快速划过撕裂 / 1.2s 后合回）、1440 浅色、
+1024（`scrollWidth = 1024`，无横向溢出，卡不被切）。

@@ -363,31 +363,17 @@ export default function Me() {
             </div>
 
             {/*
-              收尾放一张会散开的图：右半栏本来就空着，一个能抓的画面比再加一行链接有用。
-              用的是中段那张抽象封面的竖幅版 —— 同一套视觉，换个构图，不重复也不脱节。
-              只在 lg 起给：触屏没有「指针速度」这个输入，把它压到小屏的正文里也不值当。
-              scope 用 card —— 页面别处的鼠标移动不该撕掉一张用户没在看的图。
+              收尾这张图直接复刻 reactbits 的 DecayCard：指针动得越快撕得越开，
+              停下 0.6s 自己合回去，没人碰时边缘也一直在轻轻起毛。
+              参数全用原版默认值（scope=window），只改了尺寸和圆角去对齐站里的卡 ——
+              上一版把它调成 0.22 的强度、几乎不动，那不是这个效果。
+              lg 以下不挂载：触屏没有「指针速度」这个输入，撕裂就退化成一张普通照片。
             */}
             <div className="me-cover-card hidden lg:block">
               {showPortrait ? (
-              <DecayCard
-                image={contactCover}
-                alt="一张抽象的界面剖面：深色底上的紫色光点、同心圆与地平线"
-                width={320}
-                height={427}
-                radius={10}
-                scope="card"
-                intensity={0.22}
-                sensitivity={0.55}
-                hoverDecay={0.06}
-                recovery={0.55}
-                idle={0.015}
-                grain={0.32}
-                detail={3}
-                pattern={2.6}
-                travel={4}
-                tilt={5}
-              />
+                <div role="img" aria-label="一张抽象的界面剖面：深色底上的紫色光点、同心圆与地平线">
+                  <DecayCard image={contactCover} width={300} height={400} radius={12} />
+                </div>
               ) : null}
               <p className="me-cover-card__hint">把指针放上去</p>
             </div>
