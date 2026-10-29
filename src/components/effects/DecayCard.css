@@ -1,0 +1,51 @@
+/*
+ * 画布和卡片一样大。
+ *
+ * 参考实现里画布是卡片的 1.24 倍、卡面内容再内缩 8.33% —— 那是为了给撕裂边缘留抗锯齿
+ * 余量，代价是照片比卡片小一圈，四边总有一条对不齐的缝。这里画布就是卡面，圆角交给
+ * 着色器按 alpha 切，所以也不加 overflow: hidden（那会把边缘的撕裂切掉）。
+ */
+.decay-card {
+  position: relative;
+  flex: none;
+  will-change: transform;
+}
+
+.decay-card__canvas,
+.decay-card__still {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.decay-card__canvas {
+  pointer-events: none;
+}
+
+/* 预渲染产物里 canvas 是空的，JS 没跑起来时这就是卡面 */
+.decay-card__still {
+  object-fit: cover;
+  transition: opacity 180ms linear;
+}
+
+/* 纹理画好了再收掉静态图：顺序反了会闪一帧空框 */
+.decay-card[data-ready='true'] .decay-card__still {
+  opacity: 0;
+}
+
+/* WebGL 没起来、或者上下文被回收：退回一张静态照片，而不是一块黑 */
+.decay-card[data-static='true'] .decay-card__canvas {
+  display: none;
+}
+
+.decay-card__content {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 1.25rem;
+  color: #fff;
+  pointer-events: none;
+}

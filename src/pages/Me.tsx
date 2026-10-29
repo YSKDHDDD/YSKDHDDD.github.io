@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowRight, ArrowUpRight, Layers, Mail, PenLine, User } from 'lucide-react'
 import badgePortrait from '@/assets/badge-portrait.webp'
+import contactPortrait from '@/assets/contact-portrait.webp'
 import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
+import DecayCard from '@/components/effects/DecayCard'
 import DecryptedText from '@/components/effects/DecryptedText'
 import Dock, { type DockItemData } from '@/components/effects/Dock'
 import GlowBorder from '@/components/effects/GlowBorder'
@@ -12,6 +14,7 @@ import ScrollExpand from '@/components/effects/ScrollExpand'
 import TiltCard from '@/components/effects/TiltCard'
 import { NoteRow } from '@/components/notes/NoteRow'
 import { Button } from '@/components/ui/Button'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { formatDate, notes, retros } from '@/lib/content'
 import { SITE } from '@/lib/site'
 import { useTheme } from '@/lib/theme'
@@ -104,6 +107,12 @@ const sectionLinks = [
 export default function Me() {
   const { theme } = useTheme()
   const [heroRef, heroMounted] = useNearViewport<HTMLElement>(0, 0)
+  /*
+   * 收尾那张人像卡按断点挂载：它下面没有别的内容，晚一步出现没人看得见，
+   * 而窄屏上省掉的是 38KB。首屏的工牌不这么办 —— 它在折叠线以上，
+   * 预渲染产物里就得有，否则桌面首帧会空出右边那一栏。
+   */
+  const showPortrait = useMediaQuery('(min-width: 1024px)')
 
   const jump = (id: string) => {
     const el = document.getElementById(id)
@@ -306,7 +315,7 @@ export default function Me() {
               是砍剩下的。
             </p>
             <p className="mt-5 text-[14px] leading-relaxed text-white/70">
-              这一页用了八个效果，任意一屏都不会同时跑两个。删掉的比留下的多，界面才开始有形状。
+              这一页用了九个效果，任意一屏都不会同时跑两个。删掉的比留下的多，界面才开始有形状。
             </p>
           </div>
         </ScrollExpand>
@@ -322,30 +331,63 @@ export default function Me() {
         <div aria-hidden className="me-endglow" />
 
         <div className="page-shell relative py-24 sm:py-28">
-          <p className="font-mono text-label tracking-[0.14em] text-faint">CONTACT</p>
-          <h2 className="mt-3 max-w-[18em] text-h2 leading-[1.25] font-medium tracking-[-0.011em] text-fg">
-            想聊，或者只是想看看我在写什么。
-          </h2>
-          <p className="mt-4 max-w-[48ch] text-meta leading-relaxed text-muted">
-            这个站没有评论框，也没有表单。找我最直接的方式是 GitHub。
-          </p>
+          <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-16">
+            <div>
+              <p className="font-mono text-label tracking-[0.14em] text-faint">CONTACT</p>
+              <h2 className="mt-3 max-w-[18em] text-h2 leading-[1.25] font-medium tracking-[-0.011em] text-fg">
+                想聊，或者只是想看看我在写什么。
+              </h2>
+              <p className="mt-4 max-w-[48ch] text-meta leading-relaxed text-muted">
+                这个站没有评论框，也没有表单。找我最直接的方式是 GitHub。
+              </p>
 
-          <div className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-4">
-            <MagneticButton
-              onClick={() => window.open(SITE.github, '_blank', 'noopener,noreferrer')}
-            >
-              在 GitHub 上找我
-            </MagneticButton>
+              <div className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-4">
+                <MagneticButton
+                  onClick={() => window.open(SITE.github, '_blank', 'noopener,noreferrer')}
+                >
+                  在 GitHub 上找我
+                </MagneticButton>
 
-            <a
-              href={`${BASE}rss.xml`}
-              className="text-meta text-muted transition-colors hover:text-fg"
-            >
-              订阅 RSS
-            </a>
-            <Link to="/craft" className="text-meta text-muted transition-colors hover:text-fg">
-              看效果的技术说明
-            </Link>
+                <a
+                  href={`${BASE}rss.xml`}
+                  className="text-meta text-muted transition-colors hover:text-fg"
+                >
+                  订阅 RSS
+                </a>
+                <Link to="/craft" className="text-meta text-muted transition-colors hover:text-fg">
+                  看效果的技术说明
+                </Link>
+              </div>
+            </div>
+
+            {/*
+              收尾放一张会散开的照片：右半栏本来就空着，一个能抓的画面比再加一行链接有用。
+              只在 lg 起给：触屏没有「指针速度」这个输入，把人像压到小屏的正文里也不值当。
+              scope 用 card —— 页面别处的鼠标移动不该撕掉一张用户没在看的照片。
+            */}
+            <div className="me-portrait hidden lg:block">
+              {showPortrait ? (
+              <DecayCard
+                image={contactPortrait}
+                alt="一张室内的半身人像，浅褐色卷发，穿着花饰上衣"
+                width={320}
+                height={427}
+                radius={10}
+                scope="card"
+                intensity={0.38}
+                sensitivity={0.55}
+                hoverDecay={0.06}
+                recovery={0.55}
+                idle={0.08}
+                grain={0.32}
+                detail={5}
+                pattern={4}
+                travel={4}
+                tilt={5}
+              />
+              ) : null}
+              <p className="me-portrait__hint">把指针放上去</p>
+            </div>
           </div>
         </div>
       </section>
