@@ -2,10 +2,14 @@ import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { NoteRow } from '@/components/notes/NoteRow'
+import { PageWash } from '@/components/common/PageWash'
 import { StatusDot } from '@/components/common/StatusDot'
 import { TagChip } from '@/components/common/TagChip'
+import { useLocalDocs } from '@/hooks/useLocalDocs'
+import { estimateReadingTime } from '@/lib/markdown'
 import { notes, statusHints, statusLabels, tagIndex, topicLabels } from '@/lib/content'
-import type { NoteStatus, TopicId } from '@/lib/content'
+import { topicTone } from '@/lib/tone'
+import type { Entry, NoteMeta, NoteStatus, TopicId } from '@/lib/content'
 import { cn } from '@/lib/utils'
 
 const statuses: NoteStatus[] = ['seedling', 'growing', 'evergreen']
@@ -20,6 +24,14 @@ const daysSinceLatestUpdate = notes[0]
       ),
     )
   : 0
+
+/**
+ * 列表里的一行：站内笔记和本地文档走同一套渲染，只差在自己带来的 href 与标记。
+ *
+ * 本地文档的 meta 是从 IndexedDB 里现读的，它的日期可能比站内任何一篇都新，
+ * 所以两边合并后要重新排一次序 —— 否则"刚导入的那篇"会掉到列表最底下。
+ */
+type Row = Entry<NoteMeta> & { href: string; local: boolean }
 
 /** 筛选状态全部住在 URL 里：刷新不丢，能直接发给别人，也能从命令面板跳进来 */
 type Filters = {
@@ -54,21 +66,54 @@ export default function Notes() {
     setParams(next, { replace: true })
   }
 
+  const { docs: localDocs } = useLocalDocs()
+
+  /*
+    本地文档在 hydration 之后才出现：初始 [] 让服务端与首帧客户端算出同一棵树，
+    读到 IndexedDB 再 set —— 否则预渲染的 6 篇和浏览器的 8 篇会对不上。
+  */
+  const rows = useMemo<Row[]>(() => {
+    const builtin: Row[] = notes.map((note) => ({
+      ...note,
+      href: `/notes/${note.slug}`,
+      local: false,
+    }))
+    const local: Row[] = localDocs.map((doc) => ({
+      slug: doc.id,
+      href: `/local/${doc.id}`,
+      local: true,
+      meta: {
+        title: doc.title,
+        date: doc.date,
+        updated: doc.updated,
+        topic: doc.topic,
+        tags: doc.tags,
+        status: doc.status,
+        summary: doc.summary,
+      },
+      toc: [],
+      readingTime: estimateReadingTime(doc.body),
+    }))
+    return [...builtin, ...local].sort((a, b) =>
+      a.meta.date === b.meta.date ? Number(b.local) - Number(a.local) : a.meta.date < b.meta.date ? 1 : -1,
+    )
+  }, [localDocs])
+
   const topics = useMemo(() => {
     const counts = new Map<TopicId, number>()
-    for (const note of notes) counts.set(note.meta.topic, (counts.get(note.meta.topic) ?? 0) + 1)
+    for (const row of rows) counts.set(row.meta.topic, (counts.get(row.meta.topic) ?? 0) + 1)
     return [...counts.entries()]
-  }, [])
+  }, [rows])
 
   const filtered = useMemo(
     () =>
-      notes.filter(
-        (note) =>
-          (filters.topic === 'all' || note.meta.topic === filters.topic) &&
-          (filters.status === 'all' || note.meta.status === filters.status) &&
-          (!filters.tag || note.meta.tags.includes(filters.tag)),
+      rows.filter(
+        (row) =>
+          (filters.topic === 'all' || row.meta.topic === filters.topic) &&
+          (filters.status === 'all' || row.meta.status === filters.status) &&
+          (!filters.tag || row.meta.tags.includes(filters.tag)),
       ),
-    [filters.topic, filters.status, filters.tag],
+    [rows, filters.topic, filters.status, filters.tag],
   )
 
   const dirty = filters.topic !== 'all' || filters.status !== 'all' || filters.tag !== null
@@ -76,11 +121,12 @@ export default function Notes() {
 
   return (
     <div className="page-shell py-12 sm:py-16">
+      <PageWash tone="notes" />
       <header className="max-w-[52ch]">
-        <p className="font-mono text-label tracking-[0.14em] text-faint">NOTES</p>
+        <p className="font-mono text-label tracking-[0.14em] text-brand-2">NOTES</p>
         <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">笔记库</h1>
         <p className="mt-3 text-body text-muted">
-          共 {notes.length} 篇 · {topics.length} 个主题 · 最近 {latestDays} 天内有更新。
+          共 {rows.length} 篇 · {topics.length} 个主题 · 最近 {latestDays} 天内有更新。
           成熟度不是进度条，是我对结论确定程度的诚实标注。
         </p>
       </header>
@@ -97,7 +143,7 @@ export default function Notes() {
                 filters.topic === 'all' ? 'text-fg' : 'text-muted hover:text-fg',
               )}
             >
-              全部 <span className="font-mono text-label text-faint">{notes.length}</span>
+              全部 <span className="font-mono text-label text-faint">{rows.length}</span>
             </button>
             {topics.map(([id, count]) => (
               <button
@@ -105,10 +151,19 @@ export default function Notes() {
                 type="button"
                 onClick={() => apply({ topic: id })}
                 className={cn(
-                  'text-meta transition-colors duration-[var(--motion-fast)]',
-                  filters.topic === id ? 'text-fg' : 'text-muted hover:text-fg',
+                  'group inline-flex items-center gap-1.5 text-meta transition-colors duration-[var(--motion-fast)]',
+                  filters.topic === id ? '' : 'text-muted hover:text-fg',
                 )}
+                style={filters.topic === id ? { color: topicTone[id] } : undefined}
               >
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 rounded-full transition-opacity duration-[var(--motion-fast)]"
+                  style={{
+                    backgroundColor: topicTone[id],
+                    opacity: filters.topic === id ? 1 : 0.55,
+                  }}
+                />
                 {topicLabels[id]} <span className="font-mono text-label text-faint">{count}</span>
               </button>
             ))}
@@ -178,8 +233,8 @@ export default function Notes() {
             </div>
           ) : (
             <div>
-              {filtered.map((note) => (
-                <NoteRow key={note.slug} note={note} />
+              {filtered.map((row) => (
+                <NoteRow key={row.slug} note={row} href={row.href} local={row.local} />
               ))}
             </div>
           )}

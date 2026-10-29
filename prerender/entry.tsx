@@ -23,6 +23,7 @@ export function getStaticPaths(): { path: string; priority: number; changefreq: 
     { path: '/me', priority: 0.9, changefreq: 'monthly' },
     { path: '/notes', priority: 0.9, changefreq: 'weekly' },
     { path: '/retro', priority: 0.8, changefreq: 'weekly' },
+    { path: '/import', priority: 0.6, changefreq: 'monthly' },
     ...notes.map((note) => ({ path: `/notes/${note.slug}`, priority: 0.7, changefreq: 'monthly' })),
     ...retros.map((retro) => ({ path: `/retro/${retro.slug}`, priority: 0.6, changefreq: 'monthly' })),
     { path: '/craft', priority: 0.5, changefreq: 'monthly' },

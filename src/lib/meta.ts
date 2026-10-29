@@ -83,6 +83,25 @@ export function resolveMeta(pathname: string): PageMeta {
     }
   }
 
+  if (segments[0] === 'import') {
+    return base('/import', {
+      title: `导入本地文档 · ${SITE.name}`,
+      description:
+        '把自己的 markdown 拖进来，和站内笔记一起检索。文件只存在这台设备的浏览器里，不上传、不同步。',
+      type: 'website',
+    })
+  }
+
+  // 本地文档的 id 是每台设备自己的，地址对别人没有意义，也不该被收录
+  if (segments[0] === 'local') {
+    return base('/local', {
+      title: `本地文档 · ${SITE.name}`,
+      description: '这篇文档只存在于导入它的那台设备上。',
+      type: 'website',
+      noindex: true,
+    })
+  }
+
   if (segments[0] === 'me') {
     return base('/me', {
       title: `我 · ${SITE.name}`,

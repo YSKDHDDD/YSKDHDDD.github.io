@@ -14,6 +14,8 @@ export const Home = lazy(() => import('./Home'))
 export const Me = lazy(() => import('./Me'))
 export const Notes = lazy(() => import('./Notes'))
 export const NoteDetail = lazy(() => import('./NoteDetail'))
+export const LocalDoc = lazy(() => import('./LocalDoc'))
+export const ImportPage = lazy(() => import('./Import'))
 export const Retro = lazy(() => import('./Retro'))
 export const RetroDetail = lazy(() => import('./RetroDetail'))
 export const Craft = lazy(() => import('./Craft'))
@@ -32,6 +34,8 @@ const routeLoaders: Record<string, () => Promise<unknown>> = {
   '/me': () => import('./Me'),
   '/notes': () => import('./Notes'),
   '/notes/:slug': () => import('./NoteDetail'),
+  '/local/:id': () => import('./LocalDoc'),
+  '/import': () => import('./Import'),
   '/retro': () => import('./Retro'),
   '/retro/:slug': () => import('./RetroDetail'),
   '/craft': () => import('./Craft'),
@@ -43,6 +47,7 @@ const preloaded = new Set<string>(['/'])
 /** 把具体路径归一成 loader key：/notes/xxx → /notes/:slug，/notes/ → /notes */
 function loaderKey(pathname: string): string {
   if (pathname.startsWith('/notes/')) return '/notes/:slug'
+  if (pathname.startsWith('/local/')) return '/local/:id'
   if (pathname.startsWith('/retro/')) return '/retro/:slug'
   return pathname.replace(/\/+$/, '') || '/'
 }

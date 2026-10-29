@@ -5,6 +5,7 @@ import {
   BookOpen,
   Clock,
   CornerDownLeft,
+  FileText,
   Hash,
   Home,
   Info,
@@ -13,9 +14,11 @@ import {
   Rss,
   Search,
   Sun,
+  Upload,
   User,
 } from 'lucide-react'
 import { searchIndex, tagIndex } from '@/lib/content'
+import { useLocalDocs } from '@/hooks/useLocalDocs'
 import { navLinks } from '@/lib/nav'
 import { useTheme } from '@/lib/theme'
 import { Dialog } from '@/components/ui/Dialog'
@@ -32,16 +35,23 @@ const BASE = import.meta.env.BASE_URL
  * 现在所有可执行的东西都进同一个列表：动作、页面、标签、内容。搜索仍然走 Fuse，
  * 索引在构建期生成，不发请求。
  */
-type GroupId = '动作' | '页面' | '标签' | '笔记' | '复盘'
+type GroupId = '动作' | '页面' | '标签' | '笔记' | '复盘' | '本地'
 
 /** 分组是渲染顺序，不是匹配权重：动作永远在最上面，因为它是「命令」 */
-const GROUP_ORDER: GroupId[] = ['动作', '页面', '标签', '笔记', '复盘']
+const GROUP_ORDER: GroupId[] = ['动作', '页面', '标签', '本地', '笔记', '复盘']
 
 /**
  * 每组最多几条。标签给得多：搜「标签」本身就是「我想看看都有什么标签」，
  * 只给 8 个等于把一半藏起来。内容少给几条，它本来就该靠输入更具体的词来收窄。
  */
-const GROUP_LIMIT: Record<GroupId, number> = { 动作: 6, 页面: 8, 标签: 12, 笔记: 6, 复盘: 4 }
+const GROUP_LIMIT: Record<GroupId, number> = {
+  动作: 6,
+  页面: 8,
+  标签: 12,
+  本地: 5,
+  笔记: 6,
+  复盘: 4,
+}
 
 type Command = {
   id: string
@@ -58,6 +68,7 @@ type Row = Command & { index: number }
 
 const PAGE_ICONS: Record<string, ReactNode> = {
   '/notes': <BookOpen className="h-4 w-4" aria-hidden />,
+  '/import': <Upload className="h-4 w-4" aria-hidden />,
   '/retro': <Clock className="h-4 w-4" aria-hidden />,
   '/craft': <Palette className="h-4 w-4" aria-hidden />,
   '/me': <User className="h-4 w-4" aria-hidden />,
@@ -73,6 +84,14 @@ export function CommandPalette({
 }) {
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
+  /*
+    面板是常驻挂载的（SiteLayout 里一直在），所以在 /import 导入完再按 ⌘K，
+    组件不会重新挂载、也就读不到新文档。每次打开时重读一次，代价是一次 IndexedDB 查询。
+  */
+  const { docs: localDocs, reload } = useLocalDocs()
+  useEffect(() => {
+    if (open) void reload()
+  }, [open, reload])
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -139,6 +158,22 @@ export function CommandPalette({
       })
     }
 
+    /*
+      本地文档排在站内笔记前面：它们刚被导入，用户按 ⌘K 十有八九就是在找它。
+      但只给 5 条上限 —— 导入多了不该把"动作"和"页面"挤出第一屏。
+    */
+    for (const doc of localDocs) {
+      list.push({
+        id: `local-${doc.id}`,
+        group: '本地',
+        label: doc.title,
+        hint: '本地',
+        keywords: `${doc.tags.join(' ')} ${doc.summary} 本地 导入`,
+        icon: <FileText className="h-4 w-4" aria-hidden />,
+        run: () => navigate(`/local/${doc.id}`),
+      })
+    }
+
     for (const item of searchIndex) {
       list.push({
         id: `doc-${item.group}-${item.id}`,
@@ -157,7 +192,7 @@ export function CommandPalette({
     }
 
     return list
-  }, [theme, toggle, navigate])
+  }, [theme, toggle, navigate, localDocs])
 
   const fuse = useMemo(
     () =>

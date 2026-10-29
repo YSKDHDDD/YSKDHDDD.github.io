@@ -13,14 +13,16 @@ const BASE = import.meta.env.BASE_URL
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-line">
+    <footer className="relative mt-24">
+      {/* 页脚顶部用会褪色的渐变线，代替一根从头到尾等粗的 border */}
+      <div aria-hidden className="rule-gradient" />
       <div className="page-shell flex flex-col gap-6 py-10 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <p className="text-meta text-muted">
-            学习外脑 · 把技术笔记和项目复盘放在同一个地方
+            学习外脑 · 把技术笔记、项目复盘，和你自己的 markdown 放在同一个地方
           </p>
           <p className="font-mono text-label text-faint">
-            {notes.length} 篇笔记 · {retros.length} 个复盘 · 构建于 {buildDate}
+            站内 {notes.length} 篇笔记 · {retros.length} 个复盘 · 构建于 {buildDate}
           </p>
         </div>
 

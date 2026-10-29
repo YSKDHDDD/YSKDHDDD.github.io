@@ -53,7 +53,8 @@ export default function Home() {
 
               <p className="mt-6 max-w-[46ch] text-body text-muted">
                 关注代码可读性与可维护性，也用界面细节证明工程审美。
-                内容以 MDX 维护，索引在构建期生成，正文按篇加载。
+                站内笔记以 MDX 维护，索引在构建期生成；你自己的 markdown
+                可以直接拖进来，和它们进同一个库。
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -67,6 +68,17 @@ export default function Home() {
                   <Button variant="outline" size="md">
                     读一篇复盘
                   </Button>
+                </Link>
+                {/* 第三个入口不抢按钮的位置：导入是"你也可以"，不是站点的第一动作 */}
+                <Link
+                  to="/import"
+                  className="group inline-flex items-center gap-1 text-meta text-muted transition-colors hover:text-brand-2"
+                >
+                  或拖入你的 markdown
+                  <ArrowRight
+                    className="h-3 w-3 transition-transform duration-[var(--motion-fast)] group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
                 </Link>
               </div>
             </div>
