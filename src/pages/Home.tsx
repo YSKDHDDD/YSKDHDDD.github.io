@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
-import chromeHead from '@/assets/chrome-head.jpg'
+import chromeHead from '@/assets/chrome-head.webp'
 import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
 import DecryptedText from '@/components/effects/DecryptedText'
 import { Reveal } from '@/components/effects/Reveal'
