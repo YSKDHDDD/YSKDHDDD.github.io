@@ -1201,3 +1201,122 @@ ChromaGrid 原版就支持 `item.url`，只是默认渲染成 `<a target="_blank
 顺带修了一处本地环境问题：`eslint.config.js` 的 `globalIgnores` 只有 `dist`，`.cache/`（截图脚本
 和浏览器 profile 的落脚点，已在 `.gitignore` 里）会被扫进去报出几百条解析错误。加进忽略列表。
 
+---
+
+## 28. 留言：一个 Worker、一张 D1 表（2026-10-30 下午）
+
+站点是纯静态的 GitHub Pages，没有服务端。留言必须有地方落库，还得挡得住脚本。
+选 Cloudflare Workers + D1：每天 10 万次请求、5GB 存储的免费额度对个人站是过剩的，
+注册不要信用卡，`workers.dev` 子域开箱即用，D1 就是 SQLite，没有新方言要学。
+
+代价是站点从此多了一个「要单独部署、要单独记住」的东西。所以前端定了一条硬规则：
+`VITE_COMMENTS_API` 不配，留言区整块不渲染。宁可线上没有这个功能，
+也不要挂一个永远转圈的空框 —— 坏掉的入口比没有入口更伤。
+
+### 28.1 匿名优先，登录是「配了才出现」的外挂
+
+默认没有注册这一步。前端给每个浏览器发一个 UUID 存在 localStorage，请求里带
+`X-Client-Id`；服务端只拿它判断「这条是不是你写的」，不认人、不存邮箱，
+删留言靠这个 UUID 而不是账号。禁了 localStorage 的浏览器退回按 IP 认，
+还能留言，只是删不掉。
+
+登录按「配置了才出现」实现：`/api/config` 的 `auth` 字段由
+`GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` / `AUTH_SECRET` 三个 secret 是否齐备决定。
+为 false 时，前端连「用 GitHub 登录」这几个字都不渲染。
+**不做点了没反应的假按钮** —— 一个摆着好看的入口，比没有入口更像 bug。
+
+真开起来时走标准 OAuth：`state` 用「时间戳 + HMAC」自校验（十分钟有效，不建 session 表），
+回调把令牌签成 HMAC token 放进 `/me/#c=…` 带回前端。放 hash 而不是 query，
+是因为 hash 不进服务器日志，也不会被 Referer 带去别处；前端在 `main.tsx` 里、
+水合之前就取走并擦掉地址栏。
+
+### 28.2 文章评论和留言板是两个分区
+
+`scope` + `thread` 是联合分区键：
+
+| 位置 | scope | thread |
+| --- | --- | --- |
+| 笔记底部 | `post` | `reactbits-audit`（slug） |
+| 复盘底部 | `post` | `demo-app-rebuild` |
+| 生活单条 | `post` | `rooftop-dusk`（id） |
+| `/me` 留言板 | `guest` | `guest` |
+
+索引 `(scope, thread, status, created_at DESC)` 覆盖唯一的列表查询，
+文章再多也只是走索引取一页。
+
+### 28.3 三道闸，没有 Turnstile
+
+| 手段 | 规则 | 为什么这样 |
+| --- | --- | --- |
+| 蜜罐 | `website` 输入框挪到视口外 | 真人看不见；自动填表的脚本会把每个 input 都写满 |
+| 限流 | 同 IP 一分钟 2 条、一天 20 条 | 挡得住刷屏，又不妨碍正常对话 |
+| 去重 | 同作者两分钟内相同内容 | 双击和网络重试 |
+
+Turnstile 能做但没做。`challenges.cloudflare.com` 在国内经常连不上，
+配上它而脚本加载不出来的结果不是「更安全」，是**整个留言区都发不出去**。
+个人站这个量级，上面三道够用；真要加，在 `createComment` 里补一段 `siteverify`，
+前端 `CommentForm` 里挂一个 widget 即可。
+
+CORS 只回白名单里的 Origin，但它不是安全边界 —— `curl` 根本不看 CORS。
+真正拦住刷屏的是限流。
+
+### 28.4 两个都和水合有关的坑
+
+**用 `useSyncExternalStore`，不要在 effect 里 setState。**
+昵称和登录态是 localStorage 里的外部状态。渲染期直接读，预渲染（Node，没有 storage）
+和客户端首帧对不上，`hydrateRoot` 会把整棵子树重新渲染；放 effect 里 `setState`，
+ESLint 的 `react-hooks/set-state-in-effect` 会拦下来。用 `useSyncExternalStore`
+的 server snapshot 固定返回空串，首帧两边永远一致，挂载后再切到真实值。
+
+快照必须返回**字符串**。返回对象的话，每次 `JSON.parse` 都是新引用，`Object.is` 判不等，
+React 会认为数据一直在变，然后无限重渲染。
+
+**骨架屏不能带 `aria-busy`。**
+`scripts/prerender.mjs` 拿 `aria-busy="true"` 判断「整页还是骨架，渲染没跑完」。
+留言列表的局部骨架撞上这条全局规则，`/me` 直接被判失败。
+改成 `aria-hidden` —— 它本来就是给读屏软件跳过用的，语义反而更准。
+
+### 28.5 为什么不做楼中楼、不做 Markdown、不做审核队列
+
+- **楼中楼**：表里留了 `parent_id`，但第一版不开。个人站的评论量撑不起树状结构，
+  开了只会让人对着一个空回复框发呆。
+- **Markdown**：正文按 `whitespace-pre-wrap` 原样显示，换行保留。
+  引入一个渲染器就得处理 XSS、处理图片外链、处理代码块溢出，收益远小于成本。
+- **前置审核**：留言默认直接可见。一天来不了几条，让人写完看不见才是真的劝退。
+  要撤下某条用一条 SQL 改 `status='hidden'`，`worker/README.md` 里写了。
+
+### 28.6 结果
+
+| 项 | 结果 |
+| --- | --- |
+| `tsc -b` / `eslint .` | 0 错 / 干净 |
+| 预渲染 | 23 页 + 404 |
+| `CommentSection` chunk | 7.7KB（gzip 3.2KB）+ CSS 585B（gzip 383B） |
+| 详情页 HTML | +1.7KB（预渲染出的表单与骨架），gzip +0.7KB |
+| API 直连 18 项 | 写入 / 列表 / 分页游标 / `mine` 归属 / 限流 429 / 蜜罐静默 / 越权删除 403 / 分区隔离，全过 |
+| 浏览器 20 项 | 发布、刷新后仍在、删除、分区隔离、390 无横向溢出、控制台零错误 |
+| `/me` 的 Dock | 5 项共 214px，390 视口下不挤 |
+
+正文一律 `text-muted`，不用 `text-faint`：后者对深色底只有 4.17:1，
+低于正文要求的 4.5:1。`--faint` 只留给时间、计数这类真正的元信息。
+
+留言板的标题比「最近写的」小一档（20px vs 25px）。语义上它仍是 `h2`，
+但 `/me` 的主线是「我做了什么」，留言是附录，小一号正好。
+
+### 28.7 上线还需要手动做的一步
+
+前端代码合进去之后，**留言区在线上依然不会出现** —— 这是故意的：
+`COMMENTS_API` 没配就是 `commentsEnabled === false`。
+
+1. `cd worker && npm install && npx wrangler login`
+2. `npx wrangler d1 create site-comments`，把返回的 UUID 填进 `wrangler.toml`
+3. `npm run db:init && npm run deploy`
+4. 仓库 Settings → Secrets and variables → Actions → **Variables** 新建
+   `COMMENTS_API`，值是上一步给出的 `https://xxx.workers.dev`
+5. 重新跑一次部署
+
+完整说明在 `worker/README.md`。登录、Turnstile、审核这三件都是可选的，
+不做也不影响匿名留言。
+
+
+
