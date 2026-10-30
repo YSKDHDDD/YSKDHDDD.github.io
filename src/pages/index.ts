@@ -13,6 +13,7 @@ import { lazy } from 'react'
 export const Home = lazy(() => import('./Home'))
 export const Me = lazy(() => import('./Me'))
 export const Notes = lazy(() => import('./Notes'))
+export const Archive = lazy(() => import('./Archive'))
 export const NoteDetail = lazy(() => import('./NoteDetail'))
 export const LocalDoc = lazy(() => import('./LocalDoc'))
 export const ImportPage = lazy(() => import('./Import'))
@@ -35,6 +36,7 @@ const routeLoaders: Record<string, () => Promise<unknown>> = {
   '/': () => import('./Home'),
   '/me': () => import('./Me'),
   '/notes': () => import('./Notes'),
+  '/archive': () => import('./Archive'),
   '/notes/:slug': () => import('./NoteDetail'),
   '/local': () => import('./LocalDoc'),
   '/import': () => import('./Import'),

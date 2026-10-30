@@ -62,6 +62,15 @@ export function resolveMeta(pathname: string): PageMeta {
     }
   }
 
+  if (segments[0] === 'archive') {
+    const years = new Set(notes.map((note) => note.meta.date.slice(0, 4)))
+    return base('/archive', {
+      title: `归档 · ${SITE.name}`,
+      description: `${notes.length} 篇笔记的时间轴，按年份排开、跨 ${years.size} 年。中间断掉的月份不补平 —— 空白也是记录的一部分。`,
+      type: 'website',
+    })
+  }
+
   if (segments[0] === 'retro') {
     if (segments.length === 1) {
       return base('/retro', {

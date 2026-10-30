@@ -3,6 +3,7 @@ import { SiteLayout } from '@/components/layout/SiteLayout'
 import { ThemeProvider, useThemeState } from '@/lib/theme'
 import {
   About,
+  Archive,
   Craft,
   Home,
   ImportPage,
@@ -31,6 +32,7 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="me" element={<Me />} />
           <Route path="notes" element={<Notes />} />
+          <Route path="archive" element={<Archive />} />
           <Route path="notes/:slug" element={<NoteDetail />} />
           <Route path="local" element={<LocalDoc />} />
           <Route path="retro" element={<Retro />} />

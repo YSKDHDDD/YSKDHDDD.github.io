@@ -37,6 +37,9 @@ export function Footer() {
               {link.label}
             </Link>
           ))}
+          <Link to="/archive" className="text-muted transition-colors hover:text-fg">
+            归档
+          </Link>
           <a href={`${BASE}rss.xml`} className="text-faint transition-colors hover:text-fg">
             RSS
           </a>

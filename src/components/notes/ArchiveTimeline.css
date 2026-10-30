@@ -1,0 +1,278 @@
+/* ==========================================================================
+   归档时间轴
+
+   几何是三个常量撑起来的：--rail（日期栏宽）、--spine（竖轴 x 坐标）、
+   --tick（靠近时探出的短线长度）。标题的 padding-left 比 --tick 再宽 8px，
+   短线才永远不会顶到字上。
+
+   动效只有一个自变量 --effect（0..1），由 JS 的 rAF 循环逐帧写进行内；
+   下面所有派生属性（位移、颜色、缩放、透明度）都读同一个值，
+   所以不需要给任何一个属性单独写 transition —— 它们天生同步。
+   ========================================================================== */
+
+.tl {
+  --rail: 56px;
+  --spine: 80px;
+  --tick: 18px;
+  --title-gap: 26px;
+
+  /* 行高与上下留白参与定位：圆点必须钉在"第一行"的中线上，
+     标题换行成两行时 50% 会落到两行之间。 */
+  --row-pad: 10px;
+  --row-line: calc(var(--text-body) * 1.45);
+
+  position: relative;
+  isolation: isolate;
+}
+
+@media (min-width: 640px) {
+  .tl {
+    --rail: 84px;
+    --spine: 118px;
+    --tick: 22px;
+    --title-gap: 34px;
+  }
+}
+
+/* ---------- 轴上的扫光 ---------- */
+
+/* 指针在哪，轴上的那一段就亮到哪。位置用 transform 偏移，不碰 top/left，
+   否则每次 pointermove 都会触发一次布局。 */
+.tl__glow {
+  position: absolute;
+  left: calc(var(--spine) - 0.5px);
+  top: -80px;
+  width: 1px;
+  height: 160px;
+  translate: 0 var(--glow-y, 0px);
+  background-image: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in oklab, var(--brand) 70%, var(--fg)),
+    transparent
+  );
+  opacity: var(--glow-o, 0);
+  transition: opacity var(--motion-base) var(--motion-ease-soft);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ---------- 年份 ---------- */
+
+.tl__year:first-child .tl__head {
+  padding-top: 4px;
+}
+
+.tl__head {
+  display: grid;
+  grid-template-columns: var(--spine) minmax(0, 1fr);
+  align-items: center;
+  padding-block: 30px 12px;
+  position: relative;
+}
+
+.tl__year-label {
+  grid-column: 1;
+  text-align: right;
+  /* 右对齐到日期栏的右缘：年份、月份、日期三列在同一条基线上收口 */
+  padding-right: 16px;
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.tl__year-count {
+  grid-column: 2;
+  padding-left: var(--title-gap);
+  font-size: var(--text-label);
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+/* 空心圆环：轴在这里"起头"。行内的轴是逐行画的，年份头没有轴，
+   所以圆环不需要用背景色去挖洞 —— 这也是逐行画的唯一理由。 */
+.tl__ring {
+  position: absolute;
+  left: var(--spine);
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  transition: border-color var(--motion-base) var(--motion-ease-soft);
+}
+
+.tl__year:hover .tl__ring {
+  border-color: color-mix(in oklab, var(--brand) 60%, var(--line-strong));
+}
+
+/* ---------- 行 ---------- */
+
+.tl__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* --e 是这一行最终生效的强度：指针靠近（--effect）和键盘聚焦（--focus）取较大值。
+   聚焦必须能触发同一套视觉，否则键盘用户看不到"我现在在哪一行"。 */
+.tl__link {
+  --e: max(var(--effect, 0), var(--focus, 0));
+
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--spine) minmax(0, 1fr) auto;
+  align-items: baseline;
+  padding-block: var(--row-pad);
+  color: inherit;
+  text-decoration: none;
+}
+
+.tl__link:focus-visible {
+  --focus: 1;
+  outline: none;
+}
+
+/* 每一行自己画一段轴：段落之间自然断开，年份的圆环就落在断口里。
+   虚线用 repeating-linear-gradient 而不是 border-style: dashed ——
+   后者的虚线长度由浏览器决定，字号一变节奏就乱。 */
+.tl__link::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--spine) - 0.5px);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--faint) 62%, transparent) 0 4px,
+    transparent 4px 10px
+  );
+  pointer-events: none;
+}
+
+.tl__date {
+  grid-column: 1;
+  text-align: right;
+  padding-right: 16px;
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--fg) calc(var(--e) * 100%), var(--faint));
+  transform: translateX(calc(var(--e) * -3px));
+}
+
+.tl__title {
+  grid-column: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding-left: var(--title-gap);
+  padding-right: 16px;
+  /* 字号跟笔记库的行标题一致（--text-body / 500）：两个列表看的是同一批内容，
+     归档页没有理由把它们缩一号 */
+  font-size: var(--text-body);
+  line-height: 1.45;
+  font-weight: 500;
+  color: var(--fg);
+  /* 静息是正文色，最近的那一行完全变成主题色 —— 和 LineSidebar 一样，
+     颜色就是"指针在哪"的信号。中间值是插值出来的，所以扫过时是渐变而不是切换。 */
+  color: color-mix(in oklab, var(--tone, var(--brand)) calc(var(--e) * 100%), var(--fg));
+  transform: translateX(calc(var(--e) * 6px));
+}
+
+.tl__title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tl__badge {
+  flex: none;
+  padding: 1px 5px;
+  border: 1px solid color-mix(in oklab, var(--brand-2) 35%, transparent);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--brand-2);
+  vertical-align: 1px;
+}
+
+.tl__tags {
+  grid-column: 3;
+  display: none;
+  gap: 8px;
+  font-size: var(--text-label);
+  color: var(--faint);
+  white-space: nowrap;
+  opacity: calc(0.75 + var(--e) * 0.25);
+  transform: translateX(calc(var(--e) * 3px));
+}
+
+@media (min-width: 768px) {
+  .tl__tags {
+    display: flex;
+  }
+}
+
+/* 390px 下列宽只够 13 个汉字，一行截断等于把标题砍掉一半。
+   窄屏放成两行，行高不齐没关系 —— 这条线本来就是按时间排的，不是表格。 */
+@media (max-width: 639px) {
+  .tl__title-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+  }
+}
+
+/* ---------- 轴点与探出的短线 ---------- */
+
+.tl__dot {
+  position: absolute;
+  left: var(--spine);
+  top: calc(var(--row-pad) + var(--row-line) / 2);
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background-color: color-mix(in oklab, var(--tone, var(--brand)) calc(var(--e) * 100%), var(--faint));
+  box-shadow: 0 0 0 calc(var(--e) * 4px)
+    color-mix(in oklab, var(--tone, var(--brand)) calc(var(--e) * 16%), transparent);
+  transform: scale(calc(1 + var(--e) * 0.5));
+}
+
+/* 短线从轴点右侧长出来，原点在左边：它是 LineSidebar 那条 marker 的横版，
+   只不过长度由强度决定，而不是长度固定、只做缩放。 */
+.tl__tick {
+  position: absolute;
+  left: calc(var(--spine) + 6px);
+  top: calc(var(--row-pad) + var(--row-line) / 2 - 0.5px);
+  width: var(--tick);
+  height: 1px;
+  background-color: var(--tone, var(--brand));
+  opacity: var(--e);
+  transform: scaleX(var(--e));
+  transform-origin: left center;
+}
+
+/* 减少动效时：位移、缩放、扫光全部关掉，只留颜色。
+   颜色变化不是"动效"，它是键盘聚焦时唯一还能看见的定位信号。 */
+@media (prefers-reduced-motion: reduce) {
+  .tl__glow,
+  .tl__date,
+  .tl__title,
+  .tl__tags,
+  .tl__dot,
+  .tl__tick {
+    transform: none;
+  }
+}

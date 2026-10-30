@@ -4,6 +4,7 @@
 export { default as Home } from './Home'
 export { default as Me } from './Me'
 export { default as Notes } from './Notes'
+export { default as Archive } from './Archive'
 export { default as NoteDetail } from './NoteDetail'
 export { default as LocalDoc } from './LocalDoc'
 export { default as ImportPage } from './Import'

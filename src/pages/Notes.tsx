@@ -1,15 +1,14 @@
 import { useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ArrowRight, X } from 'lucide-react'
 import { NoteRow } from '@/components/notes/NoteRow'
 import { PageWash } from '@/components/common/PageWash'
 import { StatusDot } from '@/components/common/StatusDot'
 import { TagChip } from '@/components/common/TagChip'
-import { useLocalDocs } from '@/hooks/useLocalDocs'
-import { estimateReadingTime } from '@/lib/markdown'
+import { useEntryRows } from '@/hooks/useEntryRows'
 import { notes, statusHints, statusLabels, tagIndex, topicLabels } from '@/lib/content'
 import { topicTone } from '@/lib/tone'
-import type { Entry, NoteMeta, NoteStatus, TopicId } from '@/lib/content'
+import type { NoteStatus, TopicId } from '@/lib/content'
 import { cn } from '@/lib/utils'
 
 const statuses: NoteStatus[] = ['seedling', 'growing', 'evergreen']
@@ -24,14 +23,6 @@ const daysSinceLatestUpdate = notes[0]
       ),
     )
   : 0
-
-/**
- * 列表里的一行：站内笔记和本地文档走同一套渲染，只差在自己带来的 href 与标记。
- *
- * 本地文档的 meta 是从 IndexedDB 里现读的，它的日期可能比站内任何一篇都新，
- * 所以两边合并后要重新排一次序 —— 否则"刚导入的那篇"会掉到列表最底下。
- */
-type Row = Entry<NoteMeta> & { href: string; local: boolean }
 
 /** 筛选状态全部住在 URL 里：刷新不丢，能直接发给别人，也能从命令面板跳进来 */
 type Filters = {
@@ -66,38 +57,8 @@ export default function Notes() {
     setParams(next, { replace: true })
   }
 
-  const { docs: localDocs } = useLocalDocs()
-
-  /*
-    本地文档在 hydration 之后才出现：初始 [] 让服务端与首帧客户端算出同一棵树，
-    读到 IndexedDB 再 set —— 否则预渲染的 6 篇和浏览器的 8 篇会对不上。
-  */
-  const rows = useMemo<Row[]>(() => {
-    const builtin: Row[] = notes.map((note) => ({
-      ...note,
-      href: `/notes/${note.slug}`,
-      local: false,
-    }))
-    const local: Row[] = localDocs.map((doc) => ({
-      slug: doc.id,
-      href: `/local?id=${doc.id}`,
-      local: true,
-      meta: {
-        title: doc.title,
-        date: doc.date,
-        updated: doc.updated,
-        topic: doc.topic,
-        tags: doc.tags,
-        status: doc.status,
-        summary: doc.summary,
-      },
-      toc: [],
-      readingTime: estimateReadingTime(doc.body),
-    }))
-    return [...builtin, ...local].sort((a, b) =>
-      a.meta.date === b.meta.date ? Number(b.local) - Number(a.local) : a.meta.date < b.meta.date ? 1 : -1,
-    )
-  }, [localDocs])
+  /* 行数据由 hook 统一合并站内笔记与本地文档 —— 归档页用的是同一份 */
+  const rows = useEntryRows()
 
   const topics = useMemo(() => {
     const counts = new Map<TopicId, number>()
@@ -122,9 +83,24 @@ export default function Notes() {
   return (
     <div className="page-shell py-12 sm:py-16">
       <PageWash tone="notes" />
-      <header className="max-w-[52ch]">
+      {/* 归档是同一批内容的另一种读法，不是另一个栏目：入口做成标题行的右侧动作，
+          不进顶栏 —— 顶栏七项已经排到极限，再加一项就要在 1024 上撞车 */}
+      <div className="flex items-baseline justify-between gap-4">
         <p className="font-mono text-label tracking-[0.14em] text-brand-2">NOTES</p>
-        <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">笔记库</h1>
+        <Link
+          to="/archive"
+          className="group inline-flex items-center gap-1 text-meta text-muted transition-colors hover:text-fg"
+        >
+          按年归档
+          <ArrowRight
+            className="h-3.5 w-3.5 transition-transform duration-[var(--motion-fast)] group-hover:translate-x-0.5"
+            aria-hidden
+          />
+        </Link>
+      </div>
+
+      <header className="mt-4 max-w-[52ch]">
+        <h1 className="text-h1 font-medium tracking-[-0.02em] text-fg">笔记库</h1>
         <p className="mt-3 text-body text-muted">
           共 {rows.length} 篇 · {topics.length} 个主题 · 最近 {latestDays} 天内有更新。
           成熟度不是进度条，是我对结论确定程度的诚实标注。
