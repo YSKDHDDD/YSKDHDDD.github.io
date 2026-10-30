@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowRight, X } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { X } from 'lucide-react'
+import { ArchiveTimeline } from '@/components/notes/ArchiveTimeline'
 import { NoteRow } from '@/components/notes/NoteRow'
 import { PageWash } from '@/components/common/PageWash'
 import { StatusDot } from '@/components/common/StatusDot'
@@ -31,6 +32,12 @@ type Filters = {
   tag: string | null
 }
 
+/**
+ * 同一批内容的两种读法：列表回答"有哪些"，时间线回答"什么时候写的"。
+ * 视图也进 URL（?view=timeline），否则筛完一批再切视图就丢了上下文。
+ */
+type View = 'list' | 'timeline'
+
 export default function Notes() {
   const [params, setParams] = useSearchParams()
 
@@ -55,6 +62,16 @@ export default function Notes() {
     if ('tag' in patch) write('tag', patch.tag)
     // replace：连点几次筛选不该在浏览器历史里留一串记录
     setParams(next, { replace: true })
+  }
+
+  const view: View = params.get('view') === 'timeline' ? 'timeline' : 'list'
+
+  /** 换视图不动筛选：两种读法看的是同一批行，切换只该改排版 */
+  const setView = (next: View) => {
+    const query = new URLSearchParams(params)
+    if (next === 'timeline') query.set('view', 'timeline')
+    else query.delete('view')
+    setParams(query, { replace: true })
   }
 
   /* 行数据由 hook 统一合并站内笔记与本地文档 —— 归档页用的是同一份 */
@@ -83,20 +100,35 @@ export default function Notes() {
   return (
     <div className="page-shell py-12 sm:py-16">
       <PageWash tone="notes" />
-      {/* 归档是同一批内容的另一种读法，不是另一个栏目：入口做成标题行的右侧动作，
-          不进顶栏 —— 顶栏七项已经排到极限，再加一项就要在 1024 上撞车 */}
-      <div className="flex items-baseline justify-between gap-4">
+      {/* 归档并进这一页之后，切换的是「读法」而不是页面：
+          同一个筛选结果，列表按主题看，时间线按年份看 */}
+      <div className="flex items-center justify-between gap-4">
         <p className="font-mono text-label tracking-[0.14em] text-brand-2">NOTES</p>
-        <Link
-          to="/archive"
-          className="group inline-flex items-center gap-1 text-meta text-muted transition-colors hover:text-fg"
+        <div
+          role="group"
+          aria-label="切换视图"
+          className="inline-flex items-center gap-0.5 rounded-full border border-line p-0.5"
         >
-          按年归档
-          <ArrowRight
-            className="h-3.5 w-3.5 transition-transform duration-[var(--motion-fast)] group-hover:translate-x-0.5"
-            aria-hidden
-          />
-        </Link>
+          {(
+            [
+              ['list', '列表'],
+              ['timeline', '时间线'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setView(id)}
+              aria-pressed={view === id}
+              className={cn(
+                'rounded-full px-2.5 py-1 font-mono text-label transition-colors duration-[var(--motion-fast)]',
+                view === id ? 'bg-brand-soft text-brand' : 'text-faint hover:text-fg',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <header className="mt-4 max-w-[52ch]">
@@ -196,7 +228,12 @@ export default function Notes() {
             {dirty ? (
               <button
                 type="button"
-                onClick={() => setParams(new URLSearchParams(), { replace: true })}
+                onClick={() => {
+                  // 只清筛选，不动视图：点「清除筛选」不该顺带把我从时间线踢回列表
+                  const query = new URLSearchParams()
+                  if (view === 'timeline') query.set('view', 'timeline')
+                  setParams(query, { replace: true })
+                }}
                 className="shrink-0 text-label text-muted transition-colors hover:text-fg"
               >
                 清除筛选
@@ -214,6 +251,8 @@ export default function Notes() {
                 」通常是缺口最大的地方。
               </p>
             </div>
+          ) : view === 'timeline' ? (
+            <ArchiveTimeline rows={filtered} />
           ) : (
             <div>
               {filtered.map((row) => (

@@ -37,7 +37,11 @@ export function Footer() {
               {link.label}
             </Link>
           ))}
-          <Link to="/archive" className="text-muted transition-colors hover:text-fg">
+          {/* 归档已并进笔记库，这里指到它的时间线读法，不再是一个独立栏目 */}
+          <Link
+            to="/notes?view=timeline"
+            className="text-muted transition-colors hover:text-fg"
+          >
             归档
           </Link>
           <a href={`${BASE}rss.xml`} className="text-faint transition-colors hover:text-fg">

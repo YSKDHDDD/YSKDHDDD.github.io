@@ -36,7 +36,8 @@ export function getStaticPaths(): StaticPath[] {
     { path: '/', priority: 1.0, changefreq: 'weekly' },
     { path: '/me', priority: 0.9, changefreq: 'monthly' },
     { path: '/notes', priority: 0.9, changefreq: 'weekly' },
-    { path: '/archive', priority: 0.7, changefreq: 'weekly' },
+    /* 归档并进 /notes 后只剩一个跳转页：要文件（避免 404），但不该参与索引 */
+    { path: '/archive', priority: 0.1, changefreq: 'yearly', noindex: true },
     { path: '/retro', priority: 0.8, changefreq: 'weekly' },
     { path: '/life', priority: 0.7, changefreq: 'weekly' },
     { path: '/import', priority: 0.6, changefreq: 'monthly' },

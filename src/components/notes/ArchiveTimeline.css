@@ -71,6 +71,12 @@
   position: relative;
 }
 
+/* 时间线现在是笔记库的一个视图，上面紧接着「N 条结果」那条分隔线 ——
+   第一组年份头不必再自带 30px 的空，否则切换视图时会看到明显的一段断层 */
+.tl__year:first-of-type .tl__head {
+  padding-block-start: 16px;
+}
+
 .tl__year-label {
   grid-column: 1;
   text-align: right;

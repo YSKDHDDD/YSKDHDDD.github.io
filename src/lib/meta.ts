@@ -63,11 +63,12 @@ export function resolveMeta(pathname: string): PageMeta {
   }
 
   if (segments[0] === 'archive') {
-    const years = new Set(notes.map((note) => note.meta.date.slice(0, 4)))
+    // 只是一个把旧地址送到笔记库的跳转页：标题留给浏览器标签，索引交给页内的 noindex
     return base('/archive', {
-      title: `归档 · ${SITE.name}`,
-      description: `${notes.length} 篇笔记的时间轴，按年份排开、跨 ${years.size} 年。中间断掉的月份不补平 —— 空白也是记录的一部分。`,
+      title: `归档已并入笔记库 · ${SITE.name}`,
+      description: '按年归档现在是笔记库的一种视图（/notes?view=timeline），这一页只做跳转。',
       type: 'website',
+      noindex: true,
     })
   }
 
