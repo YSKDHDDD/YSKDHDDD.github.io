@@ -83,6 +83,15 @@ export function resolveMeta(pathname: string): PageMeta {
     }
   }
 
+  if (segments[0] === 'life') {
+    return base('/life', {
+      title: `生活 · ${SITE.name}`,
+      description:
+        '不放大事。傍晚的光、第二杯手冲、一次没赶上的末班车 —— 记下来不是因为特别，是因为之后还会想起来。',
+      type: 'website',
+    })
+  }
+
   if (segments[0] === 'import') {
     return base('/import', {
       title: `导入本地文档 · ${SITE.name}`,

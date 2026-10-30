@@ -8,6 +8,7 @@ import { ThemeProvider } from '../src/lib/theme'
 import About from '../src/pages/About'
 import Craft from '../src/pages/Craft'
 import Home from '../src/pages/Home'
+import Life from '../src/pages/Life'
 import NoteDetail from '../src/pages/NoteDetail'
 import Notes from '../src/pages/Notes'
 import NotFound from '../src/pages/NotFound'
@@ -22,6 +23,7 @@ const cases: { name: string; path: string; element: ReactNode }[] = [
   { name: 'NoteDetail', path: '/notes/:slug', element: <NoteDetail /> },
   { name: 'Retro', path: '/retro', element: <Retro /> },
   { name: 'RetroDetail', path: '/retro/:slug', element: <RetroDetail /> },
+  { name: 'Life', path: '/life', element: <Life /> },
   { name: 'Craft', path: '/craft', element: <Craft /> },
   { name: 'About', path: '/about', element: <About /> },
   { name: 'NotFound', path: '/nope', element: <NotFound /> },

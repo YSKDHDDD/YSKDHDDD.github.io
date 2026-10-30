@@ -20,6 +20,8 @@ export const pageTone = {
   me: ['var(--topic-design)', 'var(--brand)'],
   notes: ['var(--topic-engineering)', 'var(--brand)'],
   retro: ['var(--brand)', 'var(--decision)'],
+  // 生活页用暖色打底：它是全站唯一不讲道理的页面，底色也不该跟着品牌紫走
+  life: ['var(--decision)', 'var(--brand)'],
   craft: ['var(--brand-2)', 'var(--brand)'],
   about: ['var(--topic-tooling)', 'var(--brand)'],
   import: ['var(--brand-2)', 'var(--topic-tooling)'],

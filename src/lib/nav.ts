@@ -9,6 +9,7 @@ export const navLinks = [
   { to: '/notes', label: '笔记' },
   { to: '/import', label: '导入' },
   { to: '/retro', label: '复盘' },
+  { to: '/life', label: '生活' },
   { to: '/craft', label: '工艺' },
   { to: '/me', label: '我' },
   { to: '/about', label: '关于' },

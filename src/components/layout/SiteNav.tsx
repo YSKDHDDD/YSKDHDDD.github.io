@@ -46,10 +46,13 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
               to={link.to}
               className={({ isActive }) =>
                 cn(
-                  // whitespace-nowrap 必须有：五项目录挤在 390px 里时，
-                  // flex 会按字数压缩宽度，把「笔记」拆成一字一行。
-                  // 六项目录 + 两个按钮在 390px 里刚好差十几像素，靠窄屏收紧内边距让出来
+                  // whitespace-nowrap 必须有：目录挤在 390px 里时，flex 会按字数压缩宽度，
+                  // 把「笔记」拆成一字一行。
+                  // 七项目录 + 两个按钮在 390px 里放不下（实测会顶到主题按钮上），
+                  // 所以窄屏只留五项：笔记 / 复盘 / 生活 / 工艺 / 我。
+                  // 导入和关于在 390 下让位 —— 两者在页脚仍有入口，不算丢失。
                   'relative shrink-0 px-1.5 py-1.5 text-meta whitespace-nowrap transition-colors duration-[var(--motion-fast)] sm:px-2.5',
+                  link.to === '/import' && 'hidden sm:inline-block',
                   link.to === '/about' && 'hidden md:inline-block',
                   isActive ? 'text-fg' : 'text-muted hover:text-fg',
                 )

@@ -18,6 +18,7 @@ export const LocalDoc = lazy(() => import('./LocalDoc'))
 export const ImportPage = lazy(() => import('./Import'))
 export const Retro = lazy(() => import('./Retro'))
 export const RetroDetail = lazy(() => import('./RetroDetail'))
+export const Life = lazy(() => import('./Life'))
 export const Craft = lazy(() => import('./Craft'))
 export const About = lazy(() => import('./About'))
 export const NotFound = lazy(() => import('./NotFound'))
@@ -38,6 +39,7 @@ const routeLoaders: Record<string, () => Promise<unknown>> = {
   '/import': () => import('./Import'),
   '/retro': () => import('./Retro'),
   '/retro/:slug': () => import('./RetroDetail'),
+  '/life': () => import('./Life'),
   '/craft': () => import('./Craft'),
   '/about': () => import('./About'),
 }
