@@ -3,6 +3,7 @@ import { StaticRouter } from 'react-router-dom'
 import App from '@/App'
 import { notes, retros } from '@/lib/content'
 import { headTags, resolveMeta } from '@/lib/meta'
+import { moments } from '@/lib/moments'
 import { SITE } from '@/lib/site'
 
 /**
@@ -40,6 +41,11 @@ export function getStaticPaths(): StaticPath[] {
     { path: '/import', priority: 0.6, changefreq: 'monthly' },
     ...notes.map((note) => ({ path: `/notes/${note.slug}`, priority: 0.7, changefreq: 'monthly' })),
     ...retros.map((retro) => ({ path: `/retro/${retro.slug}`, priority: 0.6, changefreq: 'monthly' })),
+    /*
+      生活的单条记录。它们不进 RSS（那份 feed 是给「文章」的，照片不该混进去），
+      但都要有真实文件：/life/xxx 直接访问落到 404.html 的话，刷新会闪一下错误页。
+    */
+    ...moments.map((moment) => ({ path: `/life/${moment.id}`, priority: 0.6, changefreq: 'monthly' })),
     /*
       本地文档的阅读页：id 在 query 里，所以只需要一个 /local 的真实文件。
       没有它，/local?id=xxx 会落到 404.html，状态码 404、标题「页面不存在」，

@@ -19,6 +19,7 @@ export const ImportPage = lazy(() => import('./Import'))
 export const Retro = lazy(() => import('./Retro'))
 export const RetroDetail = lazy(() => import('./RetroDetail'))
 export const Life = lazy(() => import('./Life'))
+export const LifeDetail = lazy(() => import('./LifeDetail'))
 export const Craft = lazy(() => import('./Craft'))
 export const About = lazy(() => import('./About'))
 export const NotFound = lazy(() => import('./NotFound'))
@@ -40,6 +41,7 @@ const routeLoaders: Record<string, () => Promise<unknown>> = {
   '/retro': () => import('./Retro'),
   '/retro/:slug': () => import('./RetroDetail'),
   '/life': () => import('./Life'),
+  '/life/:id': () => import('./LifeDetail'),
   '/craft': () => import('./Craft'),
   '/about': () => import('./About'),
 }
@@ -53,6 +55,7 @@ function loaderKey(pathname: string): string {
   // 但旧地址也要能预热，否则从书签点进来会白一帧
   if (pathname.startsWith('/local')) return '/local'
   if (pathname.startsWith('/retro/')) return '/retro/:slug'
+  if (pathname.startsWith('/life/')) return '/life/:id'
   return pathname.replace(/\/+$/, '') || '/'
 }
 

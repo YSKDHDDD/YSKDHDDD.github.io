@@ -9,6 +9,7 @@ import About from '../src/pages/About'
 import Craft from '../src/pages/Craft'
 import Home from '../src/pages/Home'
 import Life from '../src/pages/Life'
+import LifeDetail from '../src/pages/LifeDetail'
 import NoteDetail from '../src/pages/NoteDetail'
 import Notes from '../src/pages/Notes'
 import NotFound from '../src/pages/NotFound'
@@ -24,6 +25,7 @@ const cases: { name: string; path: string; element: ReactNode }[] = [
   { name: 'Retro', path: '/retro', element: <Retro /> },
   { name: 'RetroDetail', path: '/retro/:slug', element: <RetroDetail /> },
   { name: 'Life', path: '/life', element: <Life /> },
+  { name: 'LifeDetail', path: '/life/:id', element: <LifeDetail /> },
   { name: 'Craft', path: '/craft', element: <Craft /> },
   { name: 'About', path: '/about', element: <About /> },
   { name: 'NotFound', path: '/nope', element: <NotFound /> },
@@ -32,6 +34,7 @@ const cases: { name: string; path: string; element: ReactNode }[] = [
 const initialEntries: Record<string, string> = {
   NoteDetail: '/notes/reactbits-audit',
   RetroDetail: '/retro/demo-app-rebuild',
+  LifeDetail: '/life/rooftop-dusk',
 }
 
 let failed = 0

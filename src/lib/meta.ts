@@ -1,4 +1,5 @@
 import { notes, retros } from './content'
+import { moments } from './moments'
 import { SITE, absoluteUrl } from './site'
 
 export interface PageMeta {
@@ -84,12 +85,26 @@ export function resolveMeta(pathname: string): PageMeta {
   }
 
   if (segments[0] === 'life') {
-    return base('/life', {
-      title: `生活 · ${SITE.name}`,
-      description:
-        '不放大事。傍晚的光、第二杯手冲、一次没赶上的末班车 —— 记下来不是因为特别，是因为之后还会想起来。',
-      type: 'website',
-    })
+    if (segments.length === 1) {
+      return base('/life', {
+        title: `生活 · ${SITE.name}`,
+        description:
+          '不放大事。傍晚的光、第二杯手冲、一次没赶上的末班车 —— 记下来不是因为特别，是因为之后还会想起来。',
+        type: 'website',
+      })
+    }
+
+    // 单条记录就是「一张照片加当时的文字」，按 article 发，分享出去才有卡片
+    const moment = moments.find((item) => item.id === segments[1])
+    if (moment) {
+      return base(`/life/${moment.id}`, {
+        title: `${moment.title} · ${SITE.name}`,
+        description: moment.note,
+        type: 'article',
+        published: moment.date,
+        tags: ['生活', moment.place],
+      })
+    }
   }
 
   if (segments[0] === 'import') {
