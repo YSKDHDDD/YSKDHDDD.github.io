@@ -7,6 +7,7 @@ import { Toc } from '@/components/notes/Toc'
 import { PageWash } from '@/components/common/PageWash'
 import { Badge } from '@/components/ui/Badge'
 import { RelatedReading } from '@/components/notes/RelatedReading'
+import { CommentSection } from '@/components/comments/CommentSection'
 import { formatDate, getRelatedEntries, getRetro, retroContent } from '@/lib/content'
 
 export default function RetroDetail() {
@@ -97,6 +98,8 @@ export default function RetroDetail() {
         </div>
 
         <RelatedReading items={related} currentTags={meta.tags} />
+
+        <CommentSection scope="post" thread={slug} className="mt-16" />
       </div>
     </>
   )

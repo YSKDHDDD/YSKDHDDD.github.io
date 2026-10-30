@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowDown, ArrowRight, ArrowUpRight, Layers, Mail, PenLine, User } from 'lucide-react'
+import { ArrowDown, ArrowRight, ArrowUpRight, Layers, Mail, MessageSquare, PenLine, User } from 'lucide-react'
 import badgePortrait from '@/assets/badge-portrait.webp'
 import rooftopSunset from '@/assets/rooftop-sunset.webp'
 import sunsetSky from '@/assets/sunset-sky.webp'
@@ -14,6 +14,7 @@ import MagneticButton from '@/components/effects/MagneticButton'
 import ScrollExpand from '@/components/effects/ScrollExpand'
 import TiltCard from '@/components/effects/TiltCard'
 import { NoteRow } from '@/components/notes/NoteRow'
+import { CommentSection } from '@/components/comments/CommentSection'
 import { PageWash } from '@/components/common/PageWash'
 import { Button } from '@/components/ui/Button'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -103,6 +104,7 @@ const sectionLinks = [
   { id: 'top', label: '开头', icon: <User size={18} aria-hidden /> },
   { id: 'work', label: '在意的', icon: <Layers size={18} aria-hidden /> },
   { id: 'writing', label: '写的', icon: <PenLine size={18} aria-hidden /> },
+  { id: 'guestbook', label: '留言', icon: <MessageSquare size={18} aria-hidden /> },
   { id: 'contact', label: '联系', icon: <Mail size={18} aria-hidden /> },
 ]
 
@@ -297,6 +299,11 @@ export default function Me() {
         </div>
       </section>
 
+      {/* ---------- 留言：和文章下的评论分开存，这里是公共的一块 ---------- */}
+      <section id="guestbook" className="page-shell scroll-mt-20 pb-20 sm:pb-24">
+        <CommentSection scope="guest" thread="guest" />
+      </section>
+
       {/* ---------- 段间：一句立场，用整屏展开的图说 ---------- */}
       <section aria-label="我的看法">
         {/*
@@ -352,7 +359,7 @@ export default function Me() {
                 想聊，或者只是想看看我在写什么。
               </h2>
               <p className="mt-4 max-w-[48ch] text-meta leading-relaxed text-muted">
-                这个站没有评论框，也没有表单。找我最直接的方式是 GitHub。
+                往上一点有一块留言板，不用登录就能写。更正式的事，还是在 GitHub 上找我。
               </p>
 
               <div className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-4">

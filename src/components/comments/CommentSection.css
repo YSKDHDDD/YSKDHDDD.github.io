@@ -1,0 +1,57 @@
+/**
+ * 留言区里工具类表达不了的两件事：头像的色相，和新留言落位的那一下。
+ * 布局、间距、边框一律交给工具类，和站里其他地方保持一致。
+ */
+
+.comment-section {
+  /* 详情页里它落在带目录的栅格中，默认 min-width:auto 会被长串英文撑破 */
+  min-width: 0;
+}
+
+/* 底色由昵称算出的色相决定：同一个人永远是同一个颜色，不用存头像 */
+.comment-avatar {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  border-radius: 999px;
+  background: hsl(var(--hue, 250) 48% 36%);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  user-select: none;
+}
+
+/* 只有新挂载的那条会跑：React 复用已有节点时不会重放 */
+.comment-item {
+  animation: comment-in var(--motion-in) var(--motion-ease-soft) both;
+}
+
+@keyframes comment-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/*
+ * 蜜罐。
+ * 不用 display:none —— 部分自动填表脚本会跳过不可见元素，
+ * 挪到视口外反而更容易被它们当真。
+ */
+.comment-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comment-item {
+    animation: none;
+  }
+}

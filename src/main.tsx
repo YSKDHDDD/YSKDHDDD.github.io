@@ -2,7 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
+import { captureAuthFromHash } from './lib/comments'
 import './index.css'
+
+/**
+ * GitHub 登录回跳时令牌在 /me/#c=… 里。在挂载之前就存好并擦掉 ——
+ * 放进组件的 effect 里会晚一帧，那一帧地址栏里挂着令牌，被截图或被复制走就泄露了。
+ */
+captureAuthFromHash()
 
 const container = document.getElementById('root')!
 

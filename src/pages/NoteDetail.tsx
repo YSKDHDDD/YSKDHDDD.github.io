@@ -9,6 +9,7 @@ import { PageWash } from '@/components/common/PageWash'
 import { Badge } from '@/components/ui/Badge'
 import { TagChip } from '@/components/common/TagChip'
 import { RelatedReading } from '@/components/notes/RelatedReading'
+import { CommentSection } from '@/components/comments/CommentSection'
 import {
   formatDate,
   getNote,
@@ -143,6 +144,9 @@ export default function NoteDetail() {
             <div className="bg-bg p-4" />
           )}
         </nav>
+
+        {/* 留言排在上下篇之后：读完、看完下一篇的去处，还愿意说两句的才会往下滚 */}
+        <CommentSection scope="post" thread={slug} className="mt-16" />
       </div>
     </>
   )

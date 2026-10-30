@@ -48,6 +48,9 @@ jobs:
         env:
           VITE_SITE_URL: ${{ steps.pages.outputs.base_url }}
           VITE_BASE: ${{ steps.pages.outputs.base_path }}
+          # 留言后端的地址。在 Settings → Secrets and variables → Actions →
+          # Variables 里建 COMMENTS_API 填上；没建的话构建照常过，只是留言区不渲染。
+          VITE_COMMENTS_API: ${{ vars.COMMENTS_API }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

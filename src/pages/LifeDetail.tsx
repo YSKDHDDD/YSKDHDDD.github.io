@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { PageWash } from '@/components/common/PageWash'
+import { CommentSection } from '@/components/comments/CommentSection'
 import { formatDate } from '@/lib/content'
 import { getMoment, getMomentNeighbours, moments } from '@/lib/moments'
 
@@ -123,6 +124,8 @@ export default function LifeDetail() {
             </div>
           )}
         </nav>
+
+        <CommentSection scope="post" thread={moment.id} className="mt-16" />
       </div>
     </>
   )

@@ -1,0 +1,20 @@
+# 部署前把 database_id 换成 `wrangler d1 create` 返回的那一串。
+# 其余字段开箱可用；要接 GitHub 登录再补 [vars] 里的 PUBLIC_ORIGIN 和两个 secret。
+
+name = "site-comments"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "site-comments"
+# 跑完 `wrangler d1 create site-comments` 后，把这里换成它输出的 UUID。
+# 下面这串全零只是为了本地 `wrangler dev` 能跑起来（本地库不校验真实 ID）。
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[vars]
+# 允许跨域的前端来源，逗号分隔。本地调试的两个端口留在里面不会有害。
+ALLOWED_ORIGINS = "https://yskdhddd.github.io,http://localhost:5173,http://localhost:4179"
+
+# GitHub 登录成功后把人送回哪个站。不接登录可以不填。
+PUBLIC_ORIGIN = "https://yskdhddd.github.io"
