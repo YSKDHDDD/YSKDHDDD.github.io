@@ -16,6 +16,8 @@ dist-ssr-smoke
 
 # 依赖缓存与编辑器本地设置：只影响本机，提交上去会让仓库凭空多出几十 MB
 .npm-cache
+# npm 走 --cache ./.cache/npm 装包时留下的包体（本项目实测 779MB）
+.cache/
 .claude/settings.local.json
 
 # 工作区笔记（本地记忆），不属于项目源码
