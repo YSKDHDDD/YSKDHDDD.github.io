@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import chromeHead from '@/assets/chrome-head.webp'
@@ -32,6 +32,29 @@ export default function Home() {
   const latest = notes[0]
   const thisMonth = notes.filter((note) => note.meta.date.startsWith(monthPrefix)).length
 
+  /*
+   * 等 hydration 结束、浏览器闲下来，再把 lazy 的那块挂出来。
+   *
+   * 直接写 <Suspense><DitherVeil/></Suspense> 会让深色主题必现 React #419：
+   * Suspense 边界在 hydrate 完成前就收到更新，React 只能把这个边界整个退回
+   * 客户端渲染 —— SSR 白做，切换瞬间还会闪一下。浅色下因为少了主题脚本那点
+   * 工作量，赛跑刚好赢了，所以只偶发。AuroraBackdrop 一直没报，就是因为它
+   * 用了同一个 idle 开关。
+   *
+   * 视觉上没变化：容器本身是 bg-[#120f17]，空着就是那一格墨色，
+   * 正好接上组件「从墨色里一格一格显影」的进场。
+   */
+  const [veilReady, setVeilReady] = useState(false)
+
+  useEffect(() => {
+    const idle: (cb: () => void) => number =
+      window.requestIdleCallback ?? ((cb) => window.setTimeout(cb, 200))
+    const cancel: (id: number) => void =
+      window.cancelIdleCallback ?? ((id) => window.clearTimeout(id))
+    const id = idle(() => setVeilReady(true))
+    return () => cancel(id)
+  }, [])
+
   return (
     <>
       <section className="relative isolate overflow-hidden">
@@ -45,7 +68,7 @@ export default function Home() {
                 学习外脑 · LEARNING EXOSELF
               </p>
 
-              <h1 className="mt-6 max-w-[15em] text-h1 font-medium tracking-[-0.025em] text-fg sm:text-display">
+              <h1 className="home-h1 mt-6 max-w-[15em] text-h1 font-medium tracking-[-0.025em] text-fg sm:text-display">
                 技术笔记与项目复盘，
                 <br />
                 <span className="text-brand">
@@ -69,13 +92,13 @@ export default function Home() {
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link to="/notes">
-                  <Button variant="primary" size="md">
+                  <Button as="span" variant="primary" size="md">
                     浏览笔记
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                   </Button>
                 </Link>
                 <Link to="/retro">
-                  <Button variant="outline" size="md">
+                  <Button as="span" variant="outline" size="md">
                     读一篇复盘
                   </Button>
                 </Link>
@@ -104,9 +127,11 @@ export default function Home() {
                 aria-label="虹彩金属头像被压成一比特网点，指针扫过的地方显出原色"
                 className="relative h-[clamp(360px,44vw,580px)] overflow-hidden rounded-md border border-line bg-[#120f17]"
               >
-                <Suspense fallback={null}>
-                  <DitherVeil src={chromeHead} className="h-full w-full" />
-                </Suspense>
+                {veilReady ? (
+                  <Suspense fallback={null}>
+                    <DitherVeil src={chromeHead} className="h-full w-full" />
+                  </Suspense>
+                ) : null}
               </div>
               <figcaption className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 font-mono text-label text-faint">
                 <span>移过画面，颜色回来</span>

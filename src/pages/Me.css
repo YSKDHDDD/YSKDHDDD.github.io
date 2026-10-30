@@ -249,3 +249,43 @@ body:has(.me) footer {
     translate: 0 0;
   }
 }
+
+/*
+  超宽屏下工牌会飘走：它 absolute 贴的是视口右缘，而文字在 max-width 1120 的
+  page-shell 里。2560 时两者之间空出约 1080px —— 左边一小块字、右边挂一张卡，
+  中间什么都没有。宽度过 1800 之后把工牌往内容方向收，让它重新挂在文字旁边。
+*/
+@media (min-width: 1800px) {
+  .me-lanyard {
+    right: max(3.5rem, calc((100% - 1120px) / 2 + 1rem));
+  }
+}
+
+/*
+  窄屏压光：390 下极光横向铺满，元信息那行正好落在最亮的一段（rgb(118,73,161)）,
+  连 --muted 都只有 2.6:1。这层只在文字区把极光按下去，桌面保持原来的强度。
+*/
+.me-hero__scrim {
+  position: absolute;
+  inset: 0;
+  /* 不能给 z-index：正文 .page-shell 是 relative 但没设层级，
+     压光层一旦提到 1 就会连文字一起盖住。 */
+  z-index: 0;
+  pointer-events: none;
+  display: none;
+  /* 不做成一整块平压：顶部留着光源，只在文字那一段压到底，
+     底部再放开一点，极光的走向还在，只是不再和字抢亮度。 */
+  background: linear-gradient(
+    to bottom,
+    rgb(4 6 12 / 0.18) 0%,
+    rgb(4 6 12 / 0.46) 34%,
+    rgb(4 6 12 / 0.46) 80%,
+    rgb(4 6 12 / 0.24) 100%
+  );
+}
+
+@media (max-width: 767px) {
+  .me-hero__scrim {
+    display: block;
+  }
+}

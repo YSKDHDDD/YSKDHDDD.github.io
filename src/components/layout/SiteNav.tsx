@@ -27,7 +27,11 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
       )}
     >
       <div className="page-shell flex h-full items-center justify-between gap-4">
-        <Link to="/" className="group flex items-center gap-2" aria-label="学习外脑 · 首页">
+        <Link
+          to="/"
+          className="group hit-44 relative flex items-center gap-2"
+          aria-label="学习外脑 · 首页"
+        >
           <span
             aria-hidden
             className="btn-brand grid h-6 w-6 place-items-center rounded-[6px] text-[11px] leading-none font-medium"
@@ -51,7 +55,7 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
                   // 七项目录 + 两个按钮在 390px 里放不下（实测会顶到主题按钮上），
                   // 所以窄屏只留五项：笔记 / 复盘 / 生活 / 工艺 / 我。
                   // 导入和关于在 390 下让位 —— 两者在页脚仍有入口，不算丢失。
-                  'relative shrink-0 px-1.5 py-1.5 text-meta whitespace-nowrap transition-colors duration-[var(--motion-fast)] sm:px-2.5',
+                  'hit-y relative shrink-0 px-1.5 py-1.5 text-meta whitespace-nowrap transition-colors duration-[var(--motion-fast)] sm:px-2.5',
                   link.to === '/import' && 'hidden sm:inline-block',
                   link.to === '/about' && 'hidden md:inline-block',
                   isActive ? 'text-fg' : 'text-muted hover:text-fg',
@@ -80,7 +84,7 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
             type="button"
             onClick={onOpenSearch}
             className={cn(
-              'flex h-8 items-center gap-2 rounded-sm border border-line px-1.5 text-faint sm:px-2',
+              'hit-44 relative flex h-8 items-center gap-2 rounded-sm border border-line px-1.5 text-faint sm:px-2',
               'transition-colors duration-[var(--motion-fast)] hover:border-line-strong hover:text-fg',
             )}
             aria-label="搜索（快捷键 Command K）"
@@ -95,7 +99,7 @@ export function SiteNav({ onOpenSearch }: { onOpenSearch: () => void }) {
             onClick={toggle}
             aria-label={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'}
             className={cn(
-              'grid h-8 w-8 place-items-center rounded-sm text-faint',
+              'hit-44 relative grid h-8 w-8 place-items-center rounded-sm text-faint',
               'transition-colors duration-[var(--motion-fast)] hover:bg-surface-2 hover:text-fg',
             )}
           >

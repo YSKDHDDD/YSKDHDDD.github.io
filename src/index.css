@@ -18,7 +18,9 @@
 
   --fg: #e9ebf3;
   --muted: #9ba5ba;
-  --faint: #6b7488;
+  /* 对最亮的表面色 --surface-2 仍有 4.63:1。原来 #6b7488 只有 3.52:1，
+     在列表卡片、代码块这类 --surface 系底色上不达 AA。 */
+  --faint: #7f889a;
 
   /* 品牌色有两个端点：单色品牌必然显得"平"，渐变才有光 */
   --brand: #7b6cff;
@@ -57,10 +59,12 @@
 
   --fg: #171a21;
   --muted: #525b6b;
-  --faint: #7c8598;
+  /* 浅色要往暗调：原来 #7c8598 在 --surface-2 上只有 3.46:1 */
+  --faint: #666f82;
 
   --brand: #5b4ae0;
-  --brand-2: #0b7fd4;
+  /* 11px 的节标签用它，原来 #0b7fd4 在 --surface-2 上只有 3.92:1 */
+  --brand-2: #0a72bf;
   --brand-soft: rgb(91 74 224 / 0.09);
   --decision: #946200;
   --warn: #b42318;
@@ -140,6 +144,15 @@
 @layer base {
   * {
     border-color: var(--line);
+  }
+
+  /*
+    Tailwind v4 的 preflight 不再给 button 补 cursor:pointer（v3 是补的）。
+    缺了这条，全站按钮悬停都是箭头，用户读到的信号是「这里点不了」。
+  */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
   }
 
   html {
@@ -654,5 +667,40 @@
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   触控命中区
+   视觉尺寸不动，只把可点范围撑到 44px 高（WCAG 2.5.5 的推荐值）。
+   横向只在图标按钮上撑：导航七项在 390px 里首尾相接，
+   横着扩会让「点工艺」落到「笔记」上，反而更容易点错。
+   ========================================================================== */
+.hit-y::after,
+.hit-44::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  height: max(100%, 44px);
+}
+
+.hit-y::after {
+  width: 100%;
+}
+
+.hit-44::after {
+  width: max(100%, 44px);
+}
+
+/*
+  1024–1119 这一档，两栏比例（1.12fr / 0.88fr）把文字栏压到 515px。
+  标题第二句是 11 个字，49px 需要 539px 才排得下一行 —— 少这 24px，
+  就会掉出一个孤零零的「脑」。只在这一档收字号，不让它变成寡行。
+*/
+@media (min-width: 1024px) and (max-width: 1119px) {
+  .home-h1 {
+    font-size: 45px;
   }
 }

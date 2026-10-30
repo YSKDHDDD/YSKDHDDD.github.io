@@ -123,7 +123,7 @@ export default function Craft() {
         >
           <div className="grid h-56 place-items-center bg-bg">
             <span className="text-h2 font-medium text-fg">
-              <DecryptedText text="hover 我试试" animateOn="hover" speed={45} />
+              <DecryptedText text="移过它，就解出来" animateOn="inViewHover" speed={45} />
             </span>
           </div>
           <div className="border-t border-line p-4">

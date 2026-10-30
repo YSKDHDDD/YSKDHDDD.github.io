@@ -151,9 +151,16 @@ export default function Me() {
         */}
         <div aria-hidden className="me-hero__glow" />
         {heroMounted ? <AuroraBackdrop /> : null}
+        {/*
+          窄屏上极光会整个铺到文案底下，实测元信息那行背后亮到 rgb(118,73,161)，
+          文字再怎么调色也只有 2.6:1。这一层只在小屏压暗极光，桌面不动。
+        */}
+        <div aria-hidden className="me-hero__scrim" />
 
         <div className="page-shell relative">
-          <p className="font-mono text-label tracking-[0.14em] text-faint">ME · 个人主页</p>
+          {/* 这三行都压在极光上。极光不是纯 --bg，实测手机端只有 1.97:1，
+              所以不能用 --faint（它只对纯底色做过校准） */}
+          <p className="font-mono text-label tracking-[0.14em] text-muted">ME · 个人主页</p>
 
           <h1 className="mt-6 max-w-[15em] text-h1 leading-[1.15] font-medium tracking-[-0.03em] text-fg sm:text-display">
             写能读懂的代码，
@@ -166,25 +173,25 @@ export default function Me() {
             前端。写 TypeScript，也写构建管线。在意两件事：代码读起来顺不顺，界面跟不跟手。
           </p>
 
-          <p className="mt-3 max-w-[46ch] text-meta leading-relaxed text-faint">
+          <p className="mt-3 max-w-[46ch] text-meta leading-relaxed text-muted">
             这个站是我的学习外脑 —— 读过的、踩过的、想明白的，都沉淀成能检索的文字。
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <Link to="/notes">
-              <Button variant="primary" size="md">
+              <Button as="span" variant="primary" size="md">
                 读笔记
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden />
               </Button>
             </Link>
             <Link to="/about">
-              <Button variant="outline" size="md">
+              <Button as="span" variant="outline" size="md">
                 完整履历
               </Button>
             </Link>
           </div>
 
-          <p className="mt-10 font-mono text-label text-faint">
+          <p className="mt-10 font-mono text-label text-muted">
             {notes.length} 篇笔记 · {retros.length} 个复盘 · 最近更新{' '}
             {formatDate(featured.meta.updated)}
           </p>

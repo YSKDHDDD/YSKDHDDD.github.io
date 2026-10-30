@@ -143,6 +143,13 @@
   z-index: 1;
 }
 
+/* 触屏命中区：视觉仍是 --dock-base（38px），可点范围撑到 44px */
+.dock-item::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+}
+
 .dock-tile {
   position: absolute;
   top: 0;
