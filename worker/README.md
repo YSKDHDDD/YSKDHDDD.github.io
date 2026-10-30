@@ -31,17 +31,33 @@ npm run deploy
 ## 不想装 CLI：整套在控制台做
 
 `wrangler` 的 postinstall 在某些网络环境下会卡很久（实测一次卡了 14 分钟没装完）。
-不想折腾命令行的话，浏览器里也能走完全程：
+不想折腾命令行的话，浏览器里也能走完全程。
+
+**先编译一次。** 控制台的编辑器只跑 JavaScript，而 `src/index.ts` 里全是类型注解
+（`interface Env`、`env: Env` 之类），原样贴进去会直接报语法错误。在仓库根目录执行：
+
+```bash
+node_modules/.bin/tsc -p worker/tsconfig.json --noEmit false \
+  --rootDir worker/src --outDir worker/dist
+```
+
+得到 `worker/dist/index.js`（约 15KB，单文件、零 import），第 4 步贴的是它。
+之后改过 `src/index.ts` 要重新跑一次。
 
 1. dash.cloudflare.com → **存储和数据库 → D1 SQL 数据库 → 创建**，名字填 `site-comments`
-2. 建好后进 **控制台**，把 `schema.sql` 的内容贴进去执行
+2. 建好后进 **控制台**，把 `schema.sql` 全文贴进去执行（三张索引会一起建好）
 3. 左侧 **Workers 和 Pages → 创建 → Worker**，命名 `site-comments`
-4. 在线编辑器里把 `src/index.ts` 整个替换进去，Deploy
-5. 回到这个 Worker 的 **设置 → 绑定 → 添加 → D1 数据库**，
-   **变量名必须是 `DB`**，选中第 1 步建的库
-6. **设置 → 变量和机密** 里加两个变量：
-   `ALLOWED_ORIGINS`（`https://你的用户名.github.io`）和 `PUBLIC_ORIGIN`（同前）
-7. 再 Deploy 一次，绑定才会生效
+   —— 这个名字决定最终域名是 `site-comments.<你的子域>.workers.dev`
+4. 进 **编辑代码**，把编辑器里默认内容整个删掉，粘贴 `worker/dist/index.js` 的全部内容，Deploy
+5. **设置 → 绑定 → 添加 → D1 数据库**，变量名必须是 `DB`（大写，代码里写死的），选中第 1 步建的库
+6. **设置 → 变量和机密** 里加两个明文变量：
+   - `ALLOWED_ORIGINS` = `https://你的用户名.github.io`
+   - `PUBLIC_ORIGIN` = `https://你的用户名.github.io`
+7. 再 Deploy 一次，绑定和变量才会生效
+
+**自检**：浏览器打开 `https://site-comments.<子域>.workers.dev/api/config`，
+应当返回类似 `{"auth":false,"limits":{"name":20,"body":2000}}`。
+返回 500 基本就是第 5 步的 `DB` 没绑对。
 
 完成后拿到的 `https://site-comments.<子域>.workers.dev` 就是前端要填的地址。
 
@@ -81,18 +97,37 @@ wrangler 或上面的控制台流程。
 
 ## 可选：GitHub 登录
 
-默认关闭。要开就去 GitHub 建一个 OAuth App
-（Settings → Developer settings → OAuth Apps），回调地址填
-`https://site-comments.xxx.workers.dev/api/auth/callback`，然后：
+默认关闭。三步，全部在浏览器里完成。
 
-```bash
-npx wrangler secret put GITHUB_CLIENT_ID
-npx wrangler secret put GITHUB_CLIENT_SECRET
-npx wrangler secret put AUTH_SECRET      # 随便一串长随机数，用来签令牌
-```
+**1. 建 OAuth App** —— GitHub → Settings → Developer settings → OAuth Apps → New OAuth App：
+
+| 字段 | 填什么 |
+| --- | --- |
+| Application name | 随便，比如「站点留言」 |
+| Homepage URL | `https://你的用户名.github.io` |
+| Authorization callback URL | `https://site-comments.<子域>.workers.dev/api/auth/callback` |
+
+回调地址必须**逐字符一致**，多一个斜杠都会授权失败。本地调试要另外建一个 OAuth App，
+回调填 `http://localhost:8787/api/auth/callback`——两者不能共用同一个。
+
+**2. 拿两个值** —— 建好后页面上直接给 Client ID；点 Generate a new client secret，
+那一串只显示一次，先复制走。
+
+**3. 写进 Worker** —— 该 Worker 的 设置 → 变量和机密，加三条，类型全部选**机密（Secret）**：
+
+| 名称 | 值 |
+| --- | --- |
+| `GITHUB_CLIENT_ID` | 上一步的 Client ID |
+| `GITHUB_CLIENT_SECRET` | 上一步的 Client secret |
+| `AUTH_SECRET` | 一串长随机数（`node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`），用来签令牌；换掉它等于让所有已登录的人掉线 |
+
+Deploy 之后再访问 `/api/config`，`auth` 变成 `true` 就通了。
+**前端不需要重新部署**——登录入口是运行时读 `/api/config` 决定的，不参与构建。
 
 三个都配齐后 `/api/config` 才会返回 `auth: true`，前端这时才把「用 GitHub 登录」
 的链接渲染出来。没配就完全不存在这个入口 —— 不放点了没反应的假按钮。
+
+匿名留言始终可用，登录只是多一层「这个昵称归谁」的保证，不是门槛。
 
 登录后令牌放在 `/me/#c=…` 里带回前端，存储后立刻从地址栏擦掉。
 令牌 30 天过期，`AUTH_SECRET` 一换全部失效。

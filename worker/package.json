@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "build:js": "node ../node_modules/typescript/bin/tsc -p tsconfig.json --noEmit false --rootDir src --outDir dist",
     "db:init": "wrangler d1 execute site-comments --file schema.sql --remote",
     "db:local": "wrangler d1 execute site-comments --file schema.sql --local",
     "tail": "wrangler tail"

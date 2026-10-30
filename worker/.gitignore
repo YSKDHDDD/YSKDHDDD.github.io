@@ -1,2 +1,4 @@
 node_modules/
 .wrangler/
+# `npm run build:js` 的产物，只为在控制台粘贴而存在，不进版本库
+dist/
