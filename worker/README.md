@@ -28,6 +28,23 @@ npm run db:init
 npm run deploy
 ```
 
+## 不想装 CLI：整套在控制台做
+
+`wrangler` 的 postinstall 在某些网络环境下会卡很久（实测一次卡了 14 分钟没装完）。
+不想折腾命令行的话，浏览器里也能走完全程：
+
+1. dash.cloudflare.com → **存储和数据库 → D1 SQL 数据库 → 创建**，名字填 `site-comments`
+2. 建好后进 **控制台**，把 `schema.sql` 的内容贴进去执行
+3. 左侧 **Workers 和 Pages → 创建 → Worker**，命名 `site-comments`
+4. 在线编辑器里把 `src/index.ts` 整个替换进去，Deploy
+5. 回到这个 Worker 的 **设置 → 绑定 → 添加 → D1 数据库**，
+   **变量名必须是 `DB`**，选中第 1 步建的库
+6. **设置 → 变量和机密** 里加两个变量：
+   `ALLOWED_ORIGINS`（`https://你的用户名.github.io`）和 `PUBLIC_ORIGIN`（同前）
+7. 再 Deploy 一次，绑定才会生效
+
+完成后拿到的 `https://site-comments.<子域>.workers.dev` 就是前端要填的地址。
+
 ## 接到前端
 
 把上面那个 `workers.dev` 地址写进仓库根目录的 `.env`（结尾不带斜杠）：
@@ -52,6 +69,15 @@ npm run dev        # http://localhost:8787
 
 把 `.env` 的 `VITE_COMMENTS_API` 指向 `http://localhost:8787`，主站 `npm run dev`
 起来就能连着调。本地库和远端库是分开的，随便清。
+
+要是 `npm install` 卡在 wrangler 的 postinstall 一直不动，可以不装它，直接用 Node 22 跑：
+
+```bash
+node dev-node.mjs   # 用 node:sqlite 顶替 D1，加载的还是同一份 src/index.ts
+```
+
+它每次启动都会重建本地库，适合反复测。这个只是本地联调的替代品，部署仍要走
+wrangler 或上面的控制台流程。
 
 ## 可选：GitHub 登录
 
