@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom'
 import GradientWaves from '@/components/effects/GradientWaves'
+import './NotFound.css'
 
 export default function NotFound() {
   return (
     <div className="relative isolate flex min-h-[70vh] items-center overflow-hidden">
-      <div className="absolute inset-0 -z-10 opacity-60">
-        <GradientWaves className="h-full w-full" height={100} speed={0.3} />
+      {/* 这里不套 opacity-60：透明度已经在组件里按主题算过，外面再乘一次正是浅色下看不见的原因之一 */}
+      <div className="absolute inset-0 -z-10">
+        <GradientWaves className="h-full w-full" speed={0.3} amplitude={10} />
       </div>
-      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-bg via-bg/70 to-bg" />
+      {/* 压一层底色给正文让位。深浅两套的厚度不同，见 NotFound.css */}
+      <div className="notfound-veil absolute inset-0 -z-10" />
 
       <div className="page-shell">
         <p className="font-mono text-label tracking-[0.14em] text-faint">404</p>

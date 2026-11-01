@@ -140,7 +140,7 @@ export default function Craft() {
           className="scroll-mt-24 overflow-hidden rounded-md border border-line"
         >
           <div className="relative h-56 bg-bg">
-            <GradientWaves className="absolute inset-0" height={100} speed={0.35} />
+            <GradientWaves className="absolute inset-0" speed={0.35} amplitude={11} />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-bg to-transparent" />
           </div>
           <div className="border-t border-line p-4">

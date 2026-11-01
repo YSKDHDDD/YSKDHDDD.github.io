@@ -1,0 +1,28 @@
+/*
+ * 404 页压在波浪上的那层底色。
+ *
+ * 作用是给正文让位，但它也是「浅色下看不出有波浪」的凶手：原来恒为
+ * `from-bg via-bg/70 to-bg`，也就是中段盖住 70% —— 深色主题下那 30% 的彩光
+ * 还看得见，浅色主题下就只剩一点点淡紫。
+ *
+ * 所以两套分开写：深色保留 70%（正文压在水面上，是这页的口气），
+ * 浅色放到 42% —— 白底本身对比度高，42% 已经够读，再多波浪就白画了。
+ */
+
+.notfound-veil {
+  background-image: linear-gradient(
+    to top,
+    var(--bg) 0%,
+    color-mix(in oklab, var(--bg) 70%, transparent) 52%,
+    var(--bg) 100%
+  );
+}
+
+html[data-theme='light'] .notfound-veil {
+  background-image: linear-gradient(
+    to top,
+    var(--bg) 0%,
+    color-mix(in oklab, var(--bg) 42%, transparent) 52%,
+    var(--bg) 100%
+  );
+}
