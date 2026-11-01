@@ -1,11 +1,15 @@
 /**
  * 站点留言 API —— 一个 Worker、一张 D1 表。
  *
- * 三件事：按分区列留言、写留言、删自己刚写的那条。
+ * 三件事：按分区列留言、写留言、把某条留言下架。
  * 身份默认是匿名的：前端给每个浏览器发一个 UUID，写在 X-Client-Id 头里，
  * 服务端只把它当「谁写的」用，不认人。登录是可选的 —— 三个 secret 都配齐，
  * /api/config 才会返回 auth:true，前端这时才把「用 GitHub 登录」的按钮渲染出来。
  * 没配就是纯匿名，不存在点了没反应的假按钮。
+ *
+ * 删除不是 DELETE，是给 status 换个值：作者删的标 'deleted'，管理员下架的标
+ * 'hidden'，两者都从列表里消失，但行还在。理由很实际 —— 匿名开放，第一条垃圾
+ * 或者骂人的话总会出现，进 D1 手敲 SQL 是最慢的一条路；而且误删要能撤销。
  *
  * 所有写入都过三道闸：蜜罐字段（机器人会填）、限流（同 IP 一分钟两条 / 一天二十条）、
  * 两分钟内的相同内容去重。CORS 只放白名单，但它不是安全边界 —— curl 根本不看它，
@@ -32,6 +36,10 @@ interface Env {
   GITHUB_CLIENT_ID?: string
   GITHUB_CLIENT_SECRET?: string
   AUTH_SECRET?: string
+  /** 下架 / 恢复用的口令。不配就没有管理接口，作者仍然能删自己的。 */
+  ADMIN_TOKEN?: string
+  /** IP 哈希的盐。不配就退回 AUTH_SECRET；两个都没有才是不加盐。 */
+  IP_SALT?: string
 }
 
 interface AuthUser {
@@ -56,11 +64,29 @@ interface CommentRow {
 const MAX_NAME = 24
 const MAX_BODY = 1200
 const PAGE_SIZE = 20
+const ADMIN_PAGE_SIZE = 50
 const RATE_WINDOW = 60_000
 const RATE_MAX = 2
 const DAILY_WINDOW = 86_400_000
 const DAILY_MAX = 20
 const TOKEN_TTL = 30 * 86_400_000
+
+/**
+ * status 的三个取值。'ok' 是唯一会被公开列表查到的值，
+ * 另外两个都是「下架」：作者自己删的记 'deleted'，管理员下架的记 'hidden' ——
+ * 分开记是为了以后能分辨"他自己后悔了"和"我给他撤了"。
+ */
+const STATUS_OK = 'ok'
+const STATUS_HIDDEN = 'hidden'
+const STATUS_DELETED = 'deleted'
+
+/**
+ * thread 只允许 ASCII 字母数字、下划线和连字符。
+ *
+ * 以前的做法是把非法字符剔掉：`a_b` 会变成 `ab`，和真的叫 `ab` 的那篇文章共用
+ * 一个讨论串，两边的留言混在一起还很难发现。宁可 400，也不要静默改地址。
+ */
+const THREAD_RE = /^[A-Za-z0-9_-]{1,64}$/
 
 const utf8 = new TextEncoder()
 
@@ -107,6 +133,58 @@ function toHex(buffer: ArrayBuffer): string {
 
 async function sha256(text: string): Promise<string> {
   return toHex(await crypto.subtle.digest('SHA-256', utf8.encode(text)))
+}
+
+/**
+ * 定长比较。
+ *
+ * 直接 `a === b` 会在第一个不同的字节返回，理论上能按响应时间把口令一位一位试出来。
+ * 这里把整个字符串异或完再判断，长度也先混进去，不给长度差留信号。
+ */
+function safeEqual(a: string, b: string): boolean {
+  const left = utf8.encode(a)
+  const right = utf8.encode(b)
+  let diff = left.length ^ right.length
+  for (let i = 0; i < Math.max(left.length, right.length); i += 1) {
+    diff |= (left[i] ?? 0) ^ (right[i] ?? 0)
+  }
+  return diff === 0
+}
+
+/**
+ * IP 只以加盐哈希的形式落库。
+ *
+ * 不加盐的 sha256(ip) 等于没哈希：IPv4 只有 43 亿个，一张彩虹表几分钟跑完，
+ * 库一旦泄露，每条留言都能对上具体的人。盐用 IP_SALT，没配就退回 AUTH_SECRET
+ * （它本来就要配）；两个都没有才是不加盐，那种情况只在本地联调时出现。
+ */
+async function ipDigest(ip: string, env: Env): Promise<string> {
+  const salt = env.IP_SALT ?? env.AUTH_SECRET ?? ''
+  return sha256(`${salt}|${ip}`)
+}
+
+function isAdmin(request: Request, env: Env): boolean {
+  if (!env.ADMIN_TOKEN) return false
+  const header = request.headers.get('Authorization') ?? ''
+  if (!header.startsWith('Bearer ')) return false
+  return safeEqual(header.slice(7), env.ADMIN_TOKEN)
+}
+
+/**
+ * 分页游标：`<created_at>_<id>`。
+ *
+ * 只用时间戳当下界会漏条 —— 同一个毫秒写进来的两条，第二条的 created_at 相等，
+ * `created_at < ?` 直接跳过它。带上 id 做次级比较，页与页之间才是无缝的。
+ */
+function parseCursor(raw: string | null): { at: number; id: string } | null {
+  if (!raw) return null
+  const match = /^(\d{1,15})_([A-Za-z0-9-]{1,64})$/.exec(raw)
+  if (!match) return null
+  return { at: Number(match[1]), id: match[2] }
+}
+
+function makeCursor(row: { id: string; created_at: number }): string {
+  return `${row.created_at}_${row.id}`
 }
 
 function b64url(input: string | Uint8Array): string {
@@ -187,7 +265,7 @@ async function viewerId(request: Request, env: Env, ip: string): Promise<string>
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw)) {
     return `anon:${raw}`
   }
-  return `anon:ip:${await sha256(ip)}`
+  return `anon:ip:${await ipDigest(ip, env)}`
 }
 
 /* ---------- 各个路由 ---------- */
@@ -199,22 +277,34 @@ async function listComments(
   cors: Record<string, string>,
 ): Promise<Response> {
   const scope = url.searchParams.get('scope') === 'guest' ? 'guest' : 'post'
-  const thread = (url.searchParams.get('thread') ?? '').replace(/[^a-zA-Z0-9-]/g, '')
-  if (!thread) return json({ error: '缺少 thread' }, 400, cors)
+  const thread = (url.searchParams.get('thread') ?? '').trim()
+  if (!THREAD_RE.test(thread)) return json({ error: 'thread 不合法' }, 400, cors)
 
-  const before = Number(url.searchParams.get('before') ?? '') || Number.MAX_SAFE_INTEGER
+  const cursor = parseCursor(url.searchParams.get('before'))
   const viewer = await viewerId(request, env, clientIp(request))
 
-  // 多取一条，用来判断还有没有下一页，不用再算一次 count
-  const rows = await env.DB.prepare(
-    `SELECT id, author_id, author_name, author_url, provider, body, created_at
-       FROM comments
-      WHERE scope = ? AND thread = ? AND status = 'ok' AND created_at < ?
-      ORDER BY created_at DESC
-      LIMIT ?`,
-  )
-    .bind(scope, thread, before, PAGE_SIZE + 1)
-    .all<CommentRow>()
+  // 多取一条，用来判断还有没有下一页，不用再算一次 count。
+  // 游标那一段是 (created_at, id) 的复合比较，见 parseCursor 上面的注释。
+  const rows = cursor
+    ? await env.DB.prepare(
+        `SELECT id, author_id, author_name, author_url, provider, body, created_at
+           FROM comments
+          WHERE scope = ? AND thread = ? AND status = 'ok'
+            AND (created_at < ? OR (created_at = ? AND id < ?))
+          ORDER BY created_at DESC, id DESC
+          LIMIT ?`,
+      )
+        .bind(scope, thread, cursor.at, cursor.at, cursor.id, PAGE_SIZE + 1)
+        .all<CommentRow>()
+    : await env.DB.prepare(
+        `SELECT id, author_id, author_name, author_url, provider, body, created_at
+           FROM comments
+          WHERE scope = ? AND thread = ? AND status = 'ok'
+          ORDER BY created_at DESC, id DESC
+          LIMIT ?`,
+      )
+        .bind(scope, thread, PAGE_SIZE + 1)
+        .all<CommentRow>()
 
   const items = rows.results.slice(0, PAGE_SIZE)
   const total = await env.DB.prepare(
@@ -234,10 +324,10 @@ async function listComments(
         },
         body: row.body,
         createdAt: row.created_at,
-        mine: Boolean(viewer) && row.author_id === viewer,
+        mine: row.author_id === viewer,
       })),
       total: total?.n ?? items.length,
-      next: rows.results.length > PAGE_SIZE ? items[items.length - 1].created_at : null,
+      next: rows.results.length > PAGE_SIZE && items.length ? makeCursor(items[items.length - 1]) : null,
     },
     200,
     cors,
@@ -254,8 +344,8 @@ async function createComment(
   if (!payload) return json({ error: '请求格式不对' }, 400, cors)
 
   const scope = payload.scope === 'guest' ? 'guest' : 'post'
-  const thread = clean(payload.thread, 64).replace(/[^a-zA-Z0-9-]/g, '')
-  if (!thread) return json({ error: '缺少 thread' }, 400, cors)
+  const thread = String(payload.thread ?? '').trim()
+  if (!THREAD_RE.test(thread)) return json({ error: 'thread 不合法' }, 400, cors)
 
   // 蜜罐：这个字段在页面上被 CSS 藏起来，真人看不见，机器人会老老实实填
   if (String(payload.website ?? '').trim()) return json({ ok: true }, 200, cors)
@@ -268,14 +358,16 @@ async function createComment(
   if (!body) return json({ error: '还没写内容' }, 400, cors)
 
   const viewer = auth?.id ?? (await viewerId(request, env, ip))
+  const digest = await ipDigest(ip, env)
 
   // 限流：一分钟两条、一天二十条。个人站的留言板，这个量足够正常对话，
-  // 又不至于让脚本三分钟刷满一屏。
+  // 又不至于让脚本三分钟刷满一屏。下架的行也算额度 —— 否则「发一条、删一条」
+  // 就能无限刷，而删只是改 status，行还在。
   const since = Date.now() - RATE_WINDOW
   const recent = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM comments WHERE ip_hash = ? AND created_at > ?`,
   )
-    .bind(await sha256(ip), since)
+    .bind(digest, since)
     .first<{ n: number }>()
   if ((recent?.n ?? 0) >= RATE_MAX) {
     return json({ error: '慢一点，一分钟内最多两条' }, 429, cors)
@@ -285,15 +377,16 @@ async function createComment(
   const today = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM comments WHERE ip_hash = ? AND created_at > ?`,
   )
-    .bind(await sha256(ip), dayAgo)
+    .bind(digest, dayAgo)
     .first<{ n: number }>()
   if ((today?.n ?? 0) >= DAILY_MAX) {
     return json({ error: '今天的额度用完了，明天再来' }, 429, cors)
   }
 
-  // 同一个人连着发同一段，多半是双击或者网络重试，直接当重复处理
+  // 同一个人连着发同一段，多半是双击或者网络重试，直接当重复处理。
+  // 只看还在列表里的那几条：删掉之后想重发一遍，是正当的。
   const duplicate = await env.DB.prepare(
-    `SELECT id FROM comments WHERE author_id = ? AND body = ? AND created_at > ? LIMIT 1`,
+    `SELECT id FROM comments WHERE author_id = ? AND body = ? AND status = 'ok' AND created_at > ? LIMIT 1`,
   )
     .bind(viewer, body, Date.now() - 120_000)
     .first<{ id: string }>()
@@ -305,7 +398,7 @@ async function createComment(
   await env.DB.prepare(
     `INSERT INTO comments
        (id, scope, thread, author_id, author_name, author_url, provider, body, status, ip_hash, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ok', ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -316,7 +409,8 @@ async function createComment(
       auth?.url ?? null,
       auth ? 'github' : 'anon',
       body,
-      await sha256(ip),
+      STATUS_OK,
+      digest,
       now,
       now,
     )
@@ -337,21 +431,131 @@ async function createComment(
   )
 }
 
+/**
+ * 下架一条留言。
+ *
+ * 作者删自己的：status 换成 'deleted'，管理员下架的：换成 'hidden'。
+ * 都不是 DELETE —— 硬删之后既没有证据，也没法撤销，而这一行本来也就几十字节。
+ *
+ * 管理员走的是同一个入口：带 ADMIN_TOKEN 的请求可以下架任何人的留言，
+ * 前提是它此刻还是 'ok'；已经下架过的再删一次会返回 200（幂等），不报错。
+ */
 async function deleteComment(
   request: Request,
   id: string,
   env: Env,
   cors: Record<string, string>,
 ): Promise<Response> {
-  const viewer = await viewerId(request, env, clientIp(request))
-  if (!viewer) return json({ error: '这不是你的留言' }, 403, cors)
+  const admin = isAdmin(request, env)
+  const now = Date.now()
 
-  const result = await env.DB.prepare(`DELETE FROM comments WHERE id = ? AND author_id = ?`)
-    .bind(id, viewer)
+  if (admin) {
+    await env.DB.prepare(
+      `UPDATE comments SET status = ?, updated_at = ? WHERE id = ? AND status = 'ok'`,
+    )
+      .bind(STATUS_HIDDEN, now, id)
+      .run()
+
+    // 幂等：已经下架过的再点一次也返回 200，管理脚本不必先查一遍状态
+    return json({ ok: true }, 200, cors)
+  }
+
+  const viewer = await viewerId(request, env, clientIp(request))
+  const result = await env.DB.prepare(
+    `UPDATE comments SET status = ?, updated_at = ? WHERE id = ? AND author_id = ? AND status = 'ok'`,
+  )
+    .bind(STATUS_DELETED, now, id, viewer)
     .run()
 
   if (!result.meta.changes) return json({ error: '这不是你的留言' }, 403, cors)
-  return json({ ok: true }, 200, cors)
+  return json({ ok: true, status: STATUS_DELETED }, 200, cors)
+}
+
+/* ---------- 管理：审核列表与恢复 ---------- */
+
+interface AdminRow {
+  id: string
+  scope: string
+  thread: string
+  author_name: string
+  provider: string
+  body: string
+  status: string
+  created_at: number
+}
+
+/** 只列下架的：`status=hidden`（默认）看被我撤掉的，`any` 连他自己删的一起看 */
+async function adminList(
+  request: Request,
+  url: URL,
+  env: Env,
+  cors: Record<string, string>,
+): Promise<Response> {
+  if (!isAdmin(request, env)) return json({ error: '口令不对' }, 401, cors)
+
+  const filter = url.searchParams.get('status') === 'any' ? 'any' : 'hidden'
+  const cursor = parseCursor(url.searchParams.get('before'))
+  const limit = Math.min(Math.max(Number(url.searchParams.get('limit') ?? '') || ADMIN_PAGE_SIZE, 1), 100)
+  const where = filter === 'any' ? 'status IN (?, ?)' : 'status = ?'
+  const args: unknown[] = filter === 'any' ? [STATUS_HIDDEN, STATUS_DELETED] : [STATUS_HIDDEN]
+
+  const rows = cursor
+    ? await env.DB.prepare(
+        `SELECT id, scope, thread, author_name, provider, body, status, created_at
+           FROM comments
+          WHERE ${where} AND (created_at < ? OR (created_at = ? AND id < ?))
+          ORDER BY created_at DESC, id DESC
+          LIMIT ?`,
+      )
+        .bind(...args, cursor.at, cursor.at, cursor.id, limit + 1)
+        .all<AdminRow>()
+    : await env.DB.prepare(
+        `SELECT id, scope, thread, author_name, provider, body, status, created_at
+           FROM comments
+          WHERE ${where}
+          ORDER BY created_at DESC, id DESC
+          LIMIT ?`,
+      )
+        .bind(...args, limit + 1)
+        .all<AdminRow>()
+
+  const items = rows.results.slice(0, limit)
+  return json(
+    {
+      items: items.map((row) => ({
+        id: row.id,
+        scope: row.scope,
+        thread: row.thread,
+        author: row.author_name,
+        provider: row.provider,
+        body: row.body,
+        status: row.status,
+        createdAt: row.created_at,
+      })),
+      next: rows.results.length > limit && items.length ? makeCursor(items[items.length - 1]) : null,
+    },
+    200,
+    cors,
+  )
+}
+
+/** 撤销一次下架。误删之后最需要的就是这一步，不然只能进 D1 手敲 UPDATE */
+async function adminRestore(
+  request: Request,
+  id: string,
+  env: Env,
+  cors: Record<string, string>,
+): Promise<Response> {
+  if (!isAdmin(request, env)) return json({ error: '口令不对' }, 401, cors)
+
+  const result = await env.DB.prepare(
+    `UPDATE comments SET status = ?, updated_at = ? WHERE id = ? AND status <> 'ok'`,
+  )
+    .bind(STATUS_OK, Date.now(), id)
+    .run()
+
+  if (!result.meta.changes) return json({ error: '这条不在下架列表里' }, 404, cors)
+  return json({ ok: true, status: STATUS_OK }, 200, cors)
 }
 
 /* ---------- 可选的 GitHub 登录 ---------- */
@@ -462,6 +666,16 @@ export default {
         const id = path.slice('/api/comments/'.length).replace(/[^a-zA-Z0-9-]/g, '')
         if (!id) return json({ error: '缺少 id' }, 400, cors)
         return await deleteComment(request, id, env, cors)
+      }
+
+      if (path === '/api/admin/comments' && request.method === 'GET') {
+        return await adminList(request, url, env, cors)
+      }
+
+      if (path.startsWith('/api/admin/comments/') && path.endsWith('/restore') && request.method === 'POST') {
+        const id = path.slice('/api/admin/comments/'.length, -'/restore'.length).replace(/[^a-zA-Z0-9-]/g, '')
+        if (!id) return json({ error: '缺少 id' }, 400, cors)
+        return await adminRestore(request, id, env, cors)
       }
 
       if (path === '/api/auth/start' && request.method === 'GET') {

@@ -31,7 +31,11 @@ export interface Comment {
 export interface CommentPage {
   items: Comment[]
   total: number
-  next: number | null
+  /**
+   * 下一页的游标，`<created_at>_<id>`，不透明 —— 前端只负责原样回传。
+   * 以前这里是时间戳数字，同一毫秒的两条会让翻页漏掉一条，服务端已改成复合游标。
+   */
+  next: string | null
 }
 
 export interface CommentConfig {
@@ -188,10 +192,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export async function fetchComments(
   scope: CommentScope,
   thread: string,
-  before?: number,
+  before?: string,
 ): Promise<CommentPage> {
   const query = new URLSearchParams({ scope, thread })
-  if (before) query.set('before', String(before))
+  if (before) query.set('before', before)
   return request<CommentPage>(`/api/comments?${query.toString()}`)
 }
 

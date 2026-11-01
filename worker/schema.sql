@@ -14,7 +14,10 @@ CREATE TABLE IF NOT EXISTS comments (
   author_url  TEXT,
   provider    TEXT NOT NULL DEFAULT 'anon',
   body        TEXT NOT NULL,
+  -- 'ok' 在列表里；'deleted' 是作者自己删的，'hidden' 是我下架的。
+  -- 一律软删：误删能撤销，垃圾留言留着也是证据，而一行本来只有几十字节。
   status      TEXT NOT NULL DEFAULT 'ok',
+  -- 只存加盐后的哈希（IP_SALT），不存 IP 本身
   ip_hash     TEXT NOT NULL,
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL

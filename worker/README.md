@@ -1,6 +1,7 @@
 # 留言后端
 
-一个 Cloudflare Worker + 一张 D1 表，覆盖「列留言 / 写留言 / 删自己的留言」。
+一个 Cloudflare Worker + 一张 D1 表，覆盖「列留言 / 写留言 / 下架留言」。
+下架是软删（`status` 换值），作者删自己的与管理员下架的分开记，能撤销。
 免费额度对个人站是过剩的：Workers 每天 10 万次请求，D1 5GB 存储、每天 500 万行读。
 
 主站是纯静态的 GitHub Pages，没有服务端，所以留言必须落到这里。
@@ -55,8 +56,12 @@ node_modules/.bin/tsc -p worker/tsconfig.json --noEmit false \
    - `PUBLIC_ORIGIN` = `https://你的用户名.github.io`
 7. 再 Deploy 一次，绑定和变量才会生效
 
+> **可选的两个机密**：`ADMIN_TOKEN`（管理接口的口令，见「管理」一节）与 `IP_SALT`
+> （IP 哈希的盐，不配就退回 `AUTH_SECRET`，两个都没有才是不加盐 —— 不加盐的
+> `sha256(ip)` 等于没哈希，IPv4 只有 43 亿个，泄库即可反查）。
+
 **自检**：浏览器打开 `https://site-comments.<子域>.workers.dev/api/config`，
-应当返回类似 `{"auth":false,"limits":{"name":20,"body":2000}}`。
+应当返回类似 `{"auth":false,"limits":{"name":24,"body":1200}}`。
 返回 500 基本就是第 5 步的 `DB` 没绑对。
 
 完成后拿到的 `https://site-comments.<子域>.workers.dev` 就是前端要填的地址。
@@ -89,10 +94,12 @@ npm run dev        # http://localhost:8787
 要是 `npm install` 卡在 wrangler 的 postinstall 一直不动，可以不装它，直接用 Node 22 跑：
 
 ```bash
-node dev-node.mjs   # 用 node:sqlite 顶替 D1，加载的还是同一份 src/index.ts
+# 想连管理接口一起试，就把两个口令也带上
+ADMIN_TOKEN=dev-admin-token AUTH_SECRET=dev-secret node dev-node.mjs
 ```
 
-它每次启动都会重建本地库，适合反复测。这个只是本地联调的替代品，部署仍要走
+它每次启动都会重建本地库，适合反复测。主站那边配一句
+`VITE_COMMENTS_API=http://localhost:8787 npm run dev` 就能连着看。这个只是本地联调的替代品，部署仍要走
 wrangler 或上面的控制台流程。
 
 ## 可选：GitHub 登录
@@ -135,16 +142,33 @@ Deploy 之后再访问 `/api/config`，`auth` 变成 `true` 就通了。
 ## 管理
 
 留言默认直接可见（`status = 'ok'`），不做前置审核 —— 个人站一天来不了几条，
-让人写完看不见反而更糟。要撤下某条：
+让人写完看不见反而更糟。
+
+先给 Worker 加一个机密变量 `ADMIN_TOKEN`（一串长随机数）。不配就没有管理接口，
+作者仍然能删自己的。之后三条命令就够：
 
 ```bash
-# 软删除，记录还在，列表里不再出现
-npx wrangler d1 execute site-comments --remote \
-  --command "UPDATE comments SET status='hidden' WHERE id='<uuid>'"
+API=https://site-comments.<子域>.workers.dev
+TOKEN=<ADMIN_TOKEN>
 
-# 或者看最新几条
+# 1. 看被我撤掉的（status=any 连作者自己删的一起看）
+curl -H "Authorization: Bearer $TOKEN" "$API/api/admin/comments?status=any"
+
+# 2. 下架某条（作者看不到、列表里也没有，行还在）
+curl -X DELETE -H "Authorization: Bearer $TOKEN" "$API/api/comments/<uuid>"
+
+# 3. 撤错了，恢复
+curl -X POST -H "Authorization: Bearer $TOKEN" "$API/api/admin/comments/<uuid>/restore"
+```
+
+`status` 的三个值：`ok` 在列表里，`deleted` 是作者自己删的，`hidden` 是我下架的。
+一律软删 —— 硬删之后既没有证据，也没法撤销，而一行本来只有几十字节。
+
+真要直接动库（导出、批量清理）也可以：
+
+```bash
 npx wrangler d1 execute site-comments --remote \
-  --command "SELECT created_at, thread, author_name, substr(body,1,40) FROM comments ORDER BY created_at DESC LIMIT 20"
+  --command "SELECT created_at, thread, author_name, substr(body,1,40) FROM comments WHERE status <> 'ok' ORDER BY created_at DESC LIMIT 20"
 ```
 
 区块索引是 `(scope, thread, status, created_at DESC)`，文章再多也是走索引的一页。

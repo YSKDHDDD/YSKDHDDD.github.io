@@ -38,7 +38,7 @@ export function CommentSection(props: Props) {
 function CommentThread({ scope, thread, title, hint, className }: Props) {
   const [items, setItems] = useState<Comment[]>([])
   const [total, setTotal] = useState(0)
-  const [next, setNext] = useState<number | null>(null)
+  const [next, setNext] = useState<string | null>(null)
   const [config, setConfig] = useState<CommentConfig | null>(null)
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')

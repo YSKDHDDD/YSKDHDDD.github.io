@@ -14,7 +14,8 @@ export function CommentItem({ comment, onRemoved }: Props) {
 
   async function handleRemove() {
     if (removing) return
-    if (!window.confirm('删掉这条留言？删了就找不回来了。')) return
+    // 服务端是软删（status 换值），但这里只承诺读者的视角：点了就从页面上消失
+    if (!window.confirm('删掉这条留言？')) return
 
     setRemoving(true)
     try {

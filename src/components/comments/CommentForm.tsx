@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { FormEvent } from 'react'
 import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -39,9 +39,25 @@ export function CommentForm({ scope, thread, authEnabled, onPosted }: Props) {
 
   const [nickEdit, setNickEdit] = useState<string | null>(null)
   const [body, setBody] = useState('')
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
   const [honeypot, setHoneypot] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+
+  /*
+   * 输入框跟着内容长高。
+   *
+   * 固定三行时，第 4 行只会露出小半截，正好压在计数器那一行上 —— 看着像文字
+   * 溢出了边框。320px（约 8 行）封顶，再长就内部滚动，不然一屏全被输入框占满。
+   * 用 effect 而不是 CSS 的 field-sizing：后者 Firefox 还不稳定，退化后会回到
+   * 三行、半截字的老样子。
+   */
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 320)}px`
+  }, [body])
 
   const nick = nickEdit ?? rememberedNick
   const signedIn = userName.length > 0
@@ -123,13 +139,14 @@ export function CommentForm({ scope, thread, authEnabled, onPosted }: Props) {
         </div>
 
         <textarea
+          ref={bodyRef}
           value={body}
           onChange={(event) => setBody(event.target.value)}
           rows={3}
           placeholder="说点什么…"
           aria-label="留言内容"
           className={cn(
-            'block w-full resize-y bg-transparent px-4 py-3 text-meta leading-relaxed text-fg',
+            'block w-full resize-none overflow-y-auto bg-transparent px-4 py-3 text-meta leading-relaxed text-fg',
             'outline-none placeholder:text-faint',
           )}
         />

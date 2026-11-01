@@ -59,6 +59,9 @@ const env = {
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
   AUTH_SECRET: process.env.AUTH_SECRET,
+  // 本地也要能试下架/恢复，否则管理接口在联调时永远是 401
+  ADMIN_TOKEN: process.env.ADMIN_TOKEN,
+  IP_SALT: process.env.IP_SALT,
 }
 
 const worker = (await import('./src/index.ts')).default
