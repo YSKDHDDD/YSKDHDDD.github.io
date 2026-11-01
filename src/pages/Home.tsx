@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import chromeHead from '@/assets/chrome-head.webp'
-import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
 import DecryptedText from '@/components/effects/DecryptedText'
 import { Reveal } from '@/components/effects/Reveal'
 import { SectionHeading } from '@/components/common/SectionHeading'
@@ -22,7 +21,7 @@ const monthPrefix = __BUILD_DATE__.slice(0, 7)
 const DitherVeil = lazy(() => import('@/components/effects/DitherVeil'))
 
 const craftTiles = [
-  { name: 'SoftAurora', tech: 'WebGL 片元着色器', hint: '首屏背景，空闲后加载', href: '/craft#soft-aurora' },
+  { name: 'SoftAurora', tech: 'WebGL 片元着色器', hint: '个人页背景，空闲后加载', href: '/craft#soft-aurora' },
   { name: 'DecryptedText', tech: '逐字测量 + Canvas 度量', hint: '只解一个词，不整句闪', href: '/craft#decrypted-text' },
   { name: 'ScrollExpand', tech: '滚动进度映射 transform', hint: '默认静帧，交互后才跑', href: '/craft#scroll-expand' },
   { name: 'Dock', tech: '指针距离驱动的弹性放大', hint: '从导航降级为展品', href: '/craft#dock' },
@@ -58,9 +57,6 @@ export default function Home() {
   return (
     <>
       <section className="relative isolate overflow-hidden">
-        {/* 光从左边来：右边那块墨色图版不透明的，光不先收住就会在它边缘被切断 */}
-        <AuroraBackdrop fadeToRight />
-
         <div className="page-shell relative pt-14 pb-10 sm:pt-20 sm:pb-14">
           <div className="grid items-center gap-10 lg:grid-cols-[1.12fr_0.88fr] lg:gap-14">
             <div>
