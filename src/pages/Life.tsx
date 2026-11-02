@@ -33,7 +33,7 @@ export default function Life() {
   return (
     <div className="page-shell py-12 sm:py-16">
       <PageWash tone="life" />
-      <header className="max-w-[52ch]">
+      <header className="max-w-[68ch]">
         <p className="font-mono text-label tracking-[0.14em] text-brand-2">MOMENTS</p>
         <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">生活</h1>
         <p className="mt-3 text-body text-muted">

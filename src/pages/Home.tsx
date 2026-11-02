@@ -106,7 +106,7 @@ export default function Home() {
                 成一个可检索的外脑
               </h1>
 
-              <p className="mt-6 max-w-[46ch] text-body text-muted">
+              <p className="mt-6 max-w-[62ch] text-body text-muted">
                 关注代码可读性与可维护性，也用界面细节证明工程审美。
                 站内笔记以 MDX 维护，索引在构建期生成；你自己的 markdown
                 可以直接拖进来，和它们进同一个库。

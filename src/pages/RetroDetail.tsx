@@ -48,7 +48,7 @@ export default function RetroDetail() {
           项目复盘
         </Link>
 
-        <header className="mt-8 max-w-[720px]">
+        <header className="mt-8 max-w-[760px]">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-label text-faint">
             <span>{meta.period}</span>
             <span aria-hidden>·</span>
@@ -86,7 +86,7 @@ export default function RetroDetail() {
           </div>
         </section>
 
-        <div className="mt-12 grid gap-10 lg:grid-cols-[130px_minmax(0,720px)] lg:justify-between">
+        <div className="mt-12 grid gap-10 lg:grid-cols-[130px_minmax(0,760px)] lg:justify-between">
           <Toc items={toc} />
           <article className="prose-note min-w-0">
             <Suspense

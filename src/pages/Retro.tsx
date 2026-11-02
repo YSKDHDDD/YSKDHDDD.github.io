@@ -7,7 +7,7 @@ export default function Retro() {
   return (
     <div className="page-shell py-12 sm:py-16">
       <PageWash tone="retro" />
-      <header className="max-w-[52ch]">
+      <header className="max-w-[68ch]">
         <p className="font-mono text-label tracking-[0.14em] text-brand-2">RETROSPECTIVE</p>
         <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">项目复盘</h1>
         <p className="mt-3 text-body text-muted">

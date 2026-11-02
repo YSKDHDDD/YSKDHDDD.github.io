@@ -251,13 +251,13 @@ body:has(.me) footer {
 }
 
 /*
-  超宽屏下工牌会飘走：它 absolute 贴的是视口右缘，而文字在 max-width 1120 的
-  page-shell 里。2560 时两者之间空出约 1080px —— 左边一小块字、右边挂一张卡，
+  超宽屏下工牌会飘走：它 absolute 贴的是视口右缘，而文字在 max-width 1280 的
+  page-shell 里。2560 时两者之间空出约 1000px —— 左边一小块字、右边挂一张卡，
   中间什么都没有。宽度过 1800 之后把工牌往内容方向收，让它重新挂在文字旁边。
 */
 @media (min-width: 1800px) {
   .me-lanyard {
-    right: max(3.5rem, calc((100% - 1120px) / 2 + 1rem));
+    right: max(3.5rem, calc((100% - 1280px) / 2 + 1rem));
   }
 }
 

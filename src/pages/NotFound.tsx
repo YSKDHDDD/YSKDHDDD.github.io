@@ -17,7 +17,7 @@ export default function NotFound() {
         <h1 className="mt-4 max-w-[20ch] text-h1 font-medium tracking-[-0.02em] text-fg">
           这个地址没有内容，但它有波浪
         </h1>
-        <p className="mt-4 max-w-[44ch] text-body text-muted">
+        <p className="mt-4 max-w-[58ch] text-body text-muted">
           页面可能被改过名，也可能只是我还没写完。这里唯一的常驻动效就是背景 —— 因为你不会在这页久留。
         </p>
         <div className="mt-8 flex flex-wrap gap-4 text-meta">

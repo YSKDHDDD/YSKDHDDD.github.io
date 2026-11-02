@@ -60,7 +60,7 @@ export default function NoteDetail() {
           笔记库
         </Link>
 
-        <header className="mt-8 max-w-[680px]">
+        <header className="mt-8 max-w-[760px]">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-label text-faint">
             <span style={{ color: topicTone[meta.topic] }}>{topicLabels[meta.topic]}</span>
             <span aria-hidden>·</span>
@@ -82,7 +82,7 @@ export default function NoteDetail() {
           </div>
         </header>
 
-        <div className="mt-12 grid gap-10 lg:grid-cols-[130px_minmax(0,680px)_104px] lg:justify-between">
+        <div className="mt-12 grid gap-10 lg:grid-cols-[130px_minmax(0,760px)_104px] lg:justify-between">
           <Toc items={toc} />
 
           <article className="prose-note min-w-0">

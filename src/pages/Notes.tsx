@@ -131,7 +131,7 @@ export default function Notes() {
         </div>
       </div>
 
-      <header className="mt-4 max-w-[52ch]">
+      <header className="mt-4 max-w-[68ch]">
         <h1 className="text-h1 font-medium tracking-[-0.02em] text-fg">笔记库</h1>
         <p className="mt-3 text-body text-muted">
           共 {rows.length} 篇 · {topics.length} 个主题 · 最近 {latestDays} 天内有更新。

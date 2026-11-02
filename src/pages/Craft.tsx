@@ -90,7 +90,7 @@ export default function Craft() {
   return (
     <div className="page-shell py-12 sm:py-16">
       <PageWash tone="craft" />
-      <header className="max-w-[56ch]">
+      <header className="max-w-[72ch]">
         <p className="font-mono text-label tracking-[0.14em] text-brand-2">CRAFT</p>
         <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">工艺</h1>
         <p className="mt-3 text-body text-muted">
@@ -111,7 +111,7 @@ export default function Craft() {
           <div className="border-t border-line p-4">
             <h2 className="font-mono text-meta text-fg">SoftAurora</h2>
             <p className="mt-2 text-meta leading-relaxed text-muted">
-              WebGL 片元着色器。首页只在空闲后挂载它，滚出首屏就随组件卸载。
+              WebGL 片元着色器。/me 首屏用，空闲后才挂载，滚出首屏就随组件卸载。
               减少动效偏好下直接换成静态渐变，不加载着色器。
             </p>
           </div>
@@ -253,7 +253,7 @@ export default function Craft() {
         </div>
         <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-mono text-meta text-fg">Dock</h2>
-          <p className="max-w-[64ch] text-label leading-relaxed text-faint">
+          <p className="max-w-[80ch] text-label leading-relaxed text-faint">
             指针距离驱动的弹性放大。它原本是全站导航，现在只是展品：
             Dock 的隐喻是「应用切换」，而阅读站需要的是「检索」。
           </p>
@@ -264,7 +264,7 @@ export default function Craft() {
         <h2 className="border-b border-line pb-3 text-h2 font-medium tracking-[-0.011em] text-fg">
           设计系统
         </h2>
-        <p className="mt-3 max-w-[64ch] text-meta text-muted">
+        <p className="mt-3 max-w-[80ch] text-meta text-muted">
           下面这些不是文档，是真的在跑的那套令牌。切换右上角主题，色板会跟着变。
         </p>
 
@@ -312,19 +312,15 @@ export default function Craft() {
           </div>
 
           <div>
-            <h3 className="text-label tracking-[0.06em] text-faint">栅格 · 三个容器宽度</h3>
+            <h3 className="text-label tracking-[0.06em] text-faint">栅格 · 两个容器宽度</h3>
             <ul className="mt-3 space-y-2 font-mono text-meta">
               <li className="flex justify-between border-b border-line pb-2">
-                <span className="text-fg">1120px</span>
+                <span className="text-fg">1280px</span>
                 <span className="text-faint">列表 / 工艺</span>
               </li>
               <li className="flex justify-between border-b border-line pb-2">
-                <span className="text-fg">720px</span>
-                <span className="text-faint">复盘阅读列</span>
-              </li>
-              <li className="flex justify-between border-b border-line pb-2">
-                <span className="text-fg">680px</span>
-                <span className="text-faint">笔记阅读列（34–38 字/行）</span>
+                <span className="text-fg">760px</span>
+                <span className="text-faint">阅读列（笔记 / 复盘 / 留言）</span>
               </li>
             </ul>
             <Link
@@ -332,7 +328,7 @@ export default function Craft() {
               className="mt-3 inline-flex items-center gap-1 text-label text-muted transition-colors hover:text-fg"
             >
               <ArrowLeft className="h-3 w-3 rotate-180" aria-hidden />
-              为什么是 680：推导过程
+              为什么是 760：推导过程
             </Link>
           </div>
         </div>

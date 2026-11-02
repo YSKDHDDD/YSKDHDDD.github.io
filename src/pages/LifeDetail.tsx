@@ -50,7 +50,7 @@ export default function LifeDetail() {
           生活
         </Link>
 
-        <header className="mt-8 max-w-[680px]">
+        <header className="mt-8 max-w-[760px]">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-label text-faint">
             <span style={{ color: moment.tone }}>
               {String(index).padStart(2, '0')} / {total}
@@ -82,8 +82,8 @@ export default function LifeDetail() {
           />
         </figure>
 
-        {/* 正文用 62ch 的行宽，比标题栏窄一点，读起来不用左右扫 */}
-        <div className="mt-10 max-w-[62ch] space-y-5">
+        {/* 正文比标题栏窄一档，读起来不用左右扫 */}
+        <div className="mt-10 max-w-[78ch] space-y-5">
           {moment.story.map((paragraph) => (
             <p key={paragraph} className="text-body text-muted">
               {paragraph}

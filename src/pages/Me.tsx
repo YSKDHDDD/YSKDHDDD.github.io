@@ -169,11 +169,11 @@ export default function Me() {
           </h1>
 
           {/* 中文句子不在 JSX 里断行：换行会被折叠成一个空格，中文里就是多出来的空隙 */}
-          <p className="mt-7 max-w-[46ch] text-body leading-relaxed text-muted">
+          <p className="mt-7 max-w-[62ch] text-body leading-relaxed text-muted">
             前端。写 TypeScript，也写构建管线。在意两件事：代码读起来顺不顺，界面跟不跟手。
           </p>
 
-          <p className="mt-3 max-w-[46ch] text-meta leading-relaxed text-muted">
+          <p className="mt-3 max-w-[62ch] text-meta leading-relaxed text-muted">
             这个站是我的学习外脑 —— 读过的、踩过的、想明白的，都沉淀成能检索的文字。
           </p>
 
@@ -293,7 +293,7 @@ export default function Me() {
             <h3 className="mt-4 max-w-[24em] text-h3 leading-snug font-medium tracking-[-0.01em] text-fg transition-colors group-hover:text-brand">
               {featured.meta.title}
             </h3>
-            <p className="mt-3 max-w-[56ch] text-meta leading-relaxed text-muted">
+            <p className="mt-3 max-w-[72ch] text-meta leading-relaxed text-muted">
               {featured.meta.summary}
             </p>
           </Link>
@@ -365,7 +365,7 @@ export default function Me() {
               <h2 className="mt-3 max-w-[18em] text-h2 leading-[1.25] font-medium tracking-[-0.011em] text-fg">
                 想聊，或者只是想看看我在写什么。
               </h2>
-              <p className="mt-4 max-w-[48ch] text-meta leading-relaxed text-muted">
+              <p className="mt-4 max-w-[64ch] text-meta leading-relaxed text-muted">
                 往上一点有一块留言板，不用登录就能写。更正式的事，还是在 GitHub 上找我。
               </p>
 

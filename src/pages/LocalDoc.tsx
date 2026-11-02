@@ -47,7 +47,7 @@ export default function LocalDocPage() {
       <div className="page-shell py-24 text-center">
         <p className="font-mono text-label text-faint">LOCAL</p>
         <h1 className="mt-3 text-h2 text-fg">没有指定要打开哪篇文档</h1>
-        <p className="mx-auto mt-3 max-w-[42ch] text-meta text-muted">
+        <p className="mx-auto mt-3 max-w-[56ch] text-meta text-muted">
           本地文档的地址里带着一个只属于这台设备的 id。从笔记库或导入页点进来，地址才是完整的。
         </p>
         <div className="mt-6 flex items-center justify-center gap-4 text-meta">
@@ -77,7 +77,7 @@ export default function LocalDocPage() {
       <div className="page-shell py-24 text-center">
         <p className="font-mono text-label text-faint">LOCAL · 404</p>
         <h1 className="mt-3 text-h2 text-fg">这篇本地文档不在这个浏览器里</h1>
-        <p className="mx-auto mt-3 max-w-[42ch] text-meta text-muted">
+        <p className="mx-auto mt-3 max-w-[56ch] text-meta text-muted">
           本地文档只存在导入时用的那台设备、那个浏览器里。换设备、换浏览器、或者清过站点数据，
           都会读不到——这也是"不上传"的代价。
         </p>
@@ -144,7 +144,7 @@ export default function LocalDocPage() {
           </div>
         </div>
 
-        <header className="mt-8 max-w-[680px]">
+        <header className="mt-8 max-w-[760px]">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-label text-faint">
             <TopicPicker
               value={doc.topic}
@@ -178,7 +178,7 @@ export default function LocalDocPage() {
           </div>
         </header>
 
-        <div className="mt-12 grid gap-10 lg:grid-cols-[130px_minmax(0,680px)_104px] lg:justify-between">
+        <div className="mt-12 grid gap-10 lg:grid-cols-[130px_minmax(0,760px)_104px] lg:justify-between">
           <Toc items={rendered.headings} />
 
           {/*

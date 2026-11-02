@@ -132,7 +132,7 @@ ReactBits 的效果是**素材**，不是风格。如果每个区块都挂一个
 
 ### 栅格
 - 12 列，gutter 24px。
-- 容器：列表 / 工艺 `max-w-[1120px]`；阅读 `max-w-[680px]`；首页 hero `max-w-[1180px]`。
+- 容器：列表 / 工艺 `max-w-[1280px]`；阅读列 `max-w-[760px]`（笔记 / 复盘 / 留言同档）；首页 hero 随 `page-shell`。
 - 断点：`sm 640 / md 768 / lg 1024 / xl 1280`。
 
 ### 字阶（ratio ≈ 1.23，全部落到 Tailwind token）

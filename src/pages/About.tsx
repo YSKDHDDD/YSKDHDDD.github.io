@@ -25,7 +25,7 @@ const strengths = [
     claim: '审美的判断力体现在拒绝：一个屏只留一个常驻动效，阅读页一个都不留。',
     evidence: [
       { label: '给动效做预算', href: '/notes/effect-budget' },
-      { label: '680px 是怎么算出来的', href: '/notes/reading-width' },
+      { label: '760px 是怎么算出来的', href: '/notes/reading-width' },
     ],
   },
 ]
@@ -34,7 +34,7 @@ export default function About() {
   return (
     <div className="page-shell py-12 sm:py-16">
       <PageWash tone="about" />
-      <header className="max-w-[52ch]">
+      <header className="max-w-[68ch]">
         <p className="font-mono text-label tracking-[0.14em] text-brand-2">ABOUT</p>
         <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">关于</h1>
       </header>
@@ -43,7 +43,7 @@ export default function About() {
         <div className="space-y-12">
           <section aria-label="我在做什么">
             <h2 className="text-label tracking-[0.06em] text-faint">我在做什么</h2>
-            <p className="mt-3 max-w-[62ch] text-body text-muted">
+            <p className="mt-3 max-w-[78ch] text-body text-muted">
               写前端，也写构建工具链。这个站点是我给自己造的学习外脑：
               把读过的、踩过的、想明白的东西沉淀成结构和文字，而不是散在收藏夹里。
             </p>
@@ -55,7 +55,7 @@ export default function About() {
               {strengths.map((item) => (
                 <div key={item.title} className="bg-bg p-4">
                   <h3 className="text-body font-medium text-fg">{item.title}</h3>
-                  <p className="mt-1.5 max-w-[60ch] text-meta text-muted">{item.claim}</p>
+                  <p className="mt-1.5 max-w-[76ch] text-meta text-muted">{item.claim}</p>
                   <ul className="mt-3 space-y-1">
                     {item.evidence.map((evidence) => (
                       <li key={evidence.href}>
@@ -82,7 +82,7 @@ export default function About() {
 
           <section aria-label="怎么联系我">
             <h2 className="text-label tracking-[0.06em] text-faint">怎么联系我</h2>
-            <p className="mt-3 max-w-[56ch] text-meta text-muted">
+            <p className="mt-3 max-w-[72ch] text-meta text-muted">
               这个站没有评论框，也没有表单。找我最直接的方式是 GitHub。
             </p>
             <a
