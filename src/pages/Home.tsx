@@ -9,6 +9,8 @@ import { NoteRow } from '@/components/notes/NoteRow'
 import { RetroCard } from '@/components/notes/RetroCard'
 import { Button } from '@/components/ui/Button'
 import { formatDate, notes, nowItems, retros } from '@/lib/content'
+import { useTheme } from '@/lib/theme'
+import type { Theme } from '@/lib/theme'
 
 // 构建期常量（vite define 注入）：判断「本月新增」不能跟着用户访问时间漂移
 const monthPrefix = __BUILD_DATE__.slice(0, 7)
@@ -20,6 +22,27 @@ const monthPrefix = __BUILD_DATE__.slice(0, 7)
  */
 const DitherVeil = lazy(() => import('@/components/effects/DitherVeil'))
 
+/*
+ * 网点图的两端不写死在调用处，去读样式表里的 --veil-ink / --veil-paper：
+ * 「颜色跟着主题走」只能有一个真相，写两份迟早会漂。着色器要的是 hex，
+ * 所以把计算值读出来喂给它；图版底色本身就由 CSS 变量铺，不经过 JS。
+ *
+ * 下面这两组字面量只在拿不到 document 时用（预渲染 / 服务端），和 index.css
+ * 里那两个令牌同值 —— 它们不是第二个真相，是读不到样式表时的兜底。
+ */
+const VEIL_FALLBACK: Record<Theme, { ink: string; paper: string }> = {
+  dark: { ink: '#090c15', paper: '#f4f1ea' },
+  light: { ink: '#fbfbfe', paper: '#1b1d24' },
+}
+
+function readVeilColors(theme: Theme) {
+  if (typeof document === 'undefined') return VEIL_FALLBACK[theme]
+  const style = getComputedStyle(document.documentElement)
+  const ink = style.getPropertyValue('--veil-ink').trim()
+  const paper = style.getPropertyValue('--veil-paper').trim()
+  return ink && paper ? { ink, paper } : VEIL_FALLBACK[theme]
+}
+
 const craftTiles = [
   { name: 'SoftAurora', tech: 'WebGL 片元着色器', hint: '个人页背景，空闲后加载', href: '/craft#soft-aurora' },
   { name: 'DecryptedText', tech: '逐字测量 + Canvas 度量', hint: '只解一个词，不整句闪', href: '/craft#decrypted-text' },
@@ -30,6 +53,9 @@ const craftTiles = [
 export default function Home() {
   const latest = notes[0]
   const thisMonth = notes.filter((note) => note.meta.date.startsWith(monthPrefix)).length
+  // 订阅主题：它一变，Home 重渲染，下面重新读一次计算值喂给着色器
+  const { theme } = useTheme()
+  const veilColors = readVeilColors(theme)
 
   /*
    * 等 hydration 结束、浏览器闲下来，再把 lazy 的那块挂出来。
@@ -40,8 +66,8 @@ export default function Home() {
    * 工作量，赛跑刚好赢了，所以只偶发。AuroraBackdrop 一直没报，就是因为它
    * 用了同一个 idle 开关。
    *
-   * 视觉上没变化：容器本身是 bg-[#120f17]，空着就是那一格墨色，
-   * 正好接上组件「从墨色里一格一格显影」的进场。
+   * 视觉上没变化：容器本身就是 --veil-ink（深色下那格墨、浅色下一张纸），
+   * 空着也接得上组件「从墨色里一格一格显影」的进场。
    */
   const [veilReady, setVeilReady] = useState(false)
 
@@ -114,18 +140,24 @@ export default function Home() {
 
             {/*
               首屏的图：reactbits 的 DitherVeil 原样搬过来。
-              参数一个没改 —— 用它的默认值，因为「像不像原版」不取决于我怎么调，
-              而取决于管线有没有动过。画框固定高度，里面 contain，黑的就留给墨色。
+              管线、常量、默认值都没动，只把 ink / paper 两端交给主题令牌：
+              深色是「暗房里显影」，浅色是「印在纸上」，同一张网点图换个极性。
+              画框固定高度，里面 contain，空的就留给 --veil-ink。
             */}
             <figure className="relative">
               <div
                 role="img"
                 aria-label="虹彩金属头像被压成一比特网点，指针扫过的地方显出原色"
-                className="relative h-[clamp(360px,44vw,580px)] overflow-hidden rounded-md border border-line bg-[#120f17]"
+                className="relative h-[clamp(360px,44vw,580px)] overflow-hidden rounded-md border border-line bg-[var(--veil-ink)]"
               >
                 {veilReady ? (
                   <Suspense fallback={null}>
-                    <DitherVeil src={chromeHead} className="h-full w-full" />
+                    <DitherVeil
+                      src={chromeHead}
+                      className="h-full w-full"
+                      inkColor={veilColors.ink}
+                      paperColor={veilColors.paper}
+                    />
                   </Suspense>
                 ) : null}
               </div>
