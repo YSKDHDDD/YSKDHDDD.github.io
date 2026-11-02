@@ -21,7 +21,11 @@ import './ChromaGrid.css';
      有一条全局入场规则 `[data-reveal] { opacity: 0 }`，等 IntersectionObserver
      把它改成 `data-reveal="shown"` 才现身。官方组件恰好也叫 data-reveal、
      值却是 'card' / 'spotlight'，于是整块网格永远是 opacity: 0 —— DOM 在、
-     尺寸对、图片也加载了，就是不上屏。改名后两套约定互不干扰。
+     尺寸对、图片也加载了，就是不上屏。改名后两套约定互不干扰；
+  6. 加 ChromaItem.viewTransitionName（可选）：同一条内容在列表与详情页给同一个
+     名字，卡片就从网格位置长成详情页的大图，而不是"消失又出现"。这里只渲染成
+     data-vt-name —— 网格上有几张卡片就挂几个 view-transition-name 的话，每次跳转
+     都会多出五组"旧卡片淡出"图层，所以提升成共享元素这一步交给 SiteLayout 做。
 */
 
 export interface ChromaItem {
@@ -33,6 +37,8 @@ export interface ChromaItem {
   accent?: string;
   url?: string;
   alt?: string;
+  /** 共享元素转场的名字：列表与详情页取同一个值，图才会从卡片位置长成大图 */
+  viewTransitionName?: string;
   borderColor?: string;
 }
 
@@ -307,7 +313,13 @@ export const ChromaGrid = ({
           const body: ReactNode = (
             <>
               <span className="chroma-wash" aria-hidden="true" />
-              <div className="chroma-media" data-chroma-area="">
+              <div
+                className="chroma-media"
+                data-chroma-area=""
+                // 只登记名字，不直接写 view-transition-name：网格上有几张卡片就会有几个图层。
+                // 真正跳转时由 SiteLayout 把被点的那一张提升成共享元素（见 routeTransition.ts）。
+                data-vt-name={item.viewTransitionName}
+              >
                 <img
                   className="chroma-mono"
                   src={item.image}

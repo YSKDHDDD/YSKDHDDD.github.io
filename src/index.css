@@ -450,6 +450,20 @@ html[data-theme='light']::after {
   ::view-transition-new(root) {
     animation: route-in var(--motion-base) var(--motion-ease-expo) both;
   }
+
+  /*
+   * 共享元素（/life 网格 → 详情页大图）。默认是 250ms ease，这里对齐到 --motion-base，
+   * 让图和整页淡入同一个节拍收尾。只覆盖 group 与 image-pair：old/new 两层保留默认的
+   * 交叉淡入 —— 卡片是灰的、详情是全彩，硬切会闪，交叉过去正好当"显影"。
+   */
+  ::view-transition-group(*) {
+    animation-duration: var(--motion-base);
+    animation-timing-function: var(--motion-ease-expo);
+  }
+
+  ::view-transition-image-pair(*) {
+    animation-duration: var(--motion-base);
+  }
 }
 
 @keyframes route-out {

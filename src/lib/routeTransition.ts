@@ -27,16 +27,31 @@ export function supportsViewTransition(): boolean {
 /**
  * flushSync 是必需的：React 的状态更新默认异步，不强制同步提交的话
  * startViewTransition 截新快照时 DOM 还停在旧页面上，过渡就没有内容可放。
+ *
+ * 返回过渡句柄，让调用方能在结束后收尾（比如把临时提升的共享元素名字清掉）。
+ * 不支持时返回 null —— 调用方据此知道"没有异步可等"。
  */
-export function runViewTransition(update: () => void): void {
+export function runViewTransition(update: () => void): ViewTransition | null {
   if (!supportsViewTransition()) {
     update()
-    return
+    return null
   }
 
-  document.startViewTransition(() => {
+  return document.startViewTransition(() => {
     flushSync(update)
   })
+}
+
+/**
+ * 页面上可以放 `data-vt-name="moment-xxx"` 登记自己的共享元素名字，但不要直接写
+ * `view-transition-name`：同一个名字在一个快照里只能出现一次，而且每个挂了名字的
+ * 元素都会独立成层。列表页有六张卡片，直接写死就是六组图层，跳转时另外五组会各自
+ * 淡出 —— 所以只在真正点击跳转的那一刻，把被点中的那一个提升上去。
+ */
+export function findSharedElement(root: Element | null): HTMLElement | null {
+  if (!(root instanceof Element)) return null
+  const el = root.querySelector('[data-vt-name]')
+  return el instanceof HTMLElement && el.dataset.vtName ? el : null
 }
 
 /** 给 chunk 预热加超时，避免弱网下点击长时间无响应 */

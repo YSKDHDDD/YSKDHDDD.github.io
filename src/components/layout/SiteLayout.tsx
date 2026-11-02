@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { isRoutePreloaded, preloadRoute } from '@/pages'
-import { runViewTransition, withPreloadBudget } from '@/lib/routeTransition'
+import { findSharedElement, runViewTransition, withPreloadBudget } from '@/lib/routeTransition'
 import { CommandPalette } from './CommandPalette'
 import { Footer } from './Footer'
 import { SiteNav } from './SiteNav'
@@ -88,12 +88,26 @@ export function SiteLayout() {
 
       const go = () => {
         if (token !== navToken.current) return
-        runViewTransition(() => {
+
+        // 共享元素：把被点中的那一个临时提升成 view-transition-name，
+        // 过渡一结束就摘掉 —— 常驻的话它会一直是独立图层。
+        const shared = findSharedElement(anchor)
+        if (shared) shared.style.viewTransitionName = shared.dataset.vtName ?? ''
+
+        const transition = runViewTransition(() => {
           // 快照只在回调前后各截一次，这里滚回顶部不会闪；
           // 不先复位的话，短的新页面会被浏览器 clamp 到自身底部，过渡就从页面中间开始。
           window.scrollTo({ top: 0, behavior: 'auto' })
           navigate(href)
         })
+
+        if (shared) {
+          const release = () => {
+            shared.style.viewTransitionName = ''
+          }
+          if (transition) transition.finished.then(release, release)
+          else release()
+        }
       }
 
       // chunk 没预热就先等它：过渡不能截到 Suspense 的空白帧

@@ -68,7 +68,11 @@ export default function LifeDetail() {
         </header>
 
         {/* 900×600 是这批照片的原始尺寸，容器也封在 900：不做无谓的放大，也不裁掉边角 */}
-        <figure className="mt-8 max-w-[900px]">
+        {/* view-transition-name 与 /life 网格里那张卡片同名，点开时图从卡片位置长过来 */}
+        <figure
+          className="mt-8 max-w-[900px]"
+          style={{ viewTransitionName: `moment-${moment.id}` }}
+        >
           <img
             src={moment.photo}
             alt={`${moment.title}，拍摄于${moment.place}`}

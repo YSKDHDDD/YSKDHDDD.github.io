@@ -28,6 +28,8 @@ export default function Life() {
     // 标题与这句补充都在卡片里，封面是纯装饰，再给 alt 只会让读屏念两遍
     alt: '',
     url: `/life/${moment.id}`,
+    // 与详情页的 <figure> 同名：点开时图从卡片位置长成大图，而不是淡出再淡入
+    viewTransitionName: `moment-${moment.id}`,
   }))
 
   return (
