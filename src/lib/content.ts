@@ -198,7 +198,7 @@ export const nowItems = [
   {
     label: '正在写',
     title: '中文长文的行宽推导',
-    detail: '680px 不是审美选择，是每行 34–38 字的计算结果。',
+    detail: '760px 是一次有代价的上调：每行 41 字，坦率地说超出了通用建议。',
   },
   {
     label: '正在搭',
