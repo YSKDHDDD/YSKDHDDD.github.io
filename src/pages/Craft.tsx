@@ -1,34 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Boxes, Code2, Images, Sparkles } from 'lucide-react'
-import cloud from '@/assets/cloud.webp'
-import lotus from '@/assets/lotus.webp'
-import rooftopSunset from '@/assets/rooftop-sunset.webp'
 import DecryptedText from '@/components/effects/DecryptedText'
 import { PageWash } from '@/components/common/PageWash'
 import Dock, { type DockItemData } from '@/components/effects/Dock'
 import GlowBorder from '@/components/effects/GlowBorder'
 import GradientWaves from '@/components/effects/GradientWaves'
 import MagneticButton from '@/components/effects/MagneticButton'
-import ScrollBackdrop from '@/components/effects/ScrollBackdrop'
 import SoftAurora from '@/components/effects/SoftAurora'
 import TiltCard from '@/components/effects/TiltCard'
 import { useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
-
-/*
- * 三张图按「黄昏 → 蓝天 → 绿塘」排：暖橙、蓝白、草绿，色相跨度够大。
- * 同一色调的两张交叉淡入，看起来只是「变亮了」，看不出是两个图层在互补。
- *
- * 选图的标准不是好看，是**低频**：大面积天空、成片荷叶。高细节的图（比如那张
- * 彩虹灯带天桥）各占一半时会变成一片串扰，再暗的遮罩也救不回来。
- * 首张 1920 宽撑得住桌面全屏，后两张 900 宽，靠 scrim 和运动压住锐度差。
- */
-const backdropLayers = [
-  { src: rooftopSunset, alt: '黄昏的天台，一位短发角色坐在折叠椅上，身后是亮着红光的自动售货机与城市天际线' },
-  { src: cloud, alt: '公路上方的蓝天，一大团积云压在天边' },
-  { src: lotus, alt: '满池荷叶上的中式凉亭与回廊，远处是居民楼' },
-]
 
 const dockItems: DockItemData[] = [
   { label: '笔记', icon: <Boxes size={18} aria-hidden />, onClick: () => undefined },
@@ -352,47 +334,7 @@ export default function Craft() {
             </div>
           </div>
         </section>
-        <section
-          id="scroll-backdrop"
-          aria-label="ScrollBackdrop 展品"
-          className="mt-16 scroll-mt-24 border-t border-line pt-8"
-        >
-          <h2 className="text-h2 font-medium tracking-[-0.011em] text-fg">ScrollBackdrop</h2>
-          <p className="mt-3 max-w-[80ch] text-meta leading-relaxed text-muted">
-            滚动驱动的背景序列：吸顶舞台不动，三层背景按同一个进度交叉淡入。
-            上一张是被下一张接过去的，不是被换掉的。下面这一段占三屏 —— 继续往下滚。
-          </p>
-          <p className="mt-3 max-w-[80ch] text-label leading-relaxed text-faint">
-            逐帧只写 opacity 与 transform。斜切模式才动 clip-path，而且只在 0 &lt; opacity &lt; 1
-            的交接区间里写，静止帧一律置 none —— 重绘成本被限制在过渡那一段。
-            prefers-reduced-motion 下停在第一帧，滚动距离与版面高度都不变。
-          </p>
-        </section>
       </div>
-
-      <section aria-label="滚动背景序列演示" className="border-t border-line">
-        <ScrollBackdrop
-          layers={backdropLayers}
-          hold={0.24}
-          parallax={56}
-          split={46}
-          smoothing={0.09}
-          scrim={0.68}
-        >
-          <div className="max-w-[34rem] [text-shadow:0_2px_20px_rgba(0,0,0,0.55)]">
-            <p className="font-mono text-label tracking-[0.14em] text-white/60">SCROLL BACKDROP</p>
-            <p className="mt-3 text-[clamp(1.5rem,3.2vw,2.2rem)] leading-[1.22] font-medium tracking-[-0.02em] text-white">
-              背景不是被换掉的，
-              <br />
-              是被下一层接过去的。
-            </p>
-            <p className="mt-4 max-w-[46ch] text-[15px] leading-[1.7] text-white/80">
-              三层共享同一个进度 t：相邻两层的透明度在交接区间里互补，再叠一层上下错位和一道斜切，
-              所以看不到「切换」那一帧。往后滚，它还有两屏。
-            </p>
-          </div>
-        </ScrollBackdrop>
-      </section>
     </>
   )
 }

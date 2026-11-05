@@ -1694,3 +1694,34 @@ Lanyard 则是 `src/demo/Components/LanyardDemo.jsx` 里的三个 import。
 `tsc` 0、`eslint` 0、构建 26 页。headless Edge 截图核对四处：
 桌面 1440 浅色首屏（卡片比例 1:1.4 与原图一致，无拉伸）、段间图起手态与展开态、
 深色主题首屏（白底卡面在深紫背景上对比强但不刺眼）、移动端 390 起手态（人物居中，纵深感保留）。
+
+## 34. 从 /craft 撤下 ScrollBackdrop 展位（2026-11-05）
+
+### 34.1 为什么撤
+
+`/craft` 是一个「逛一圈看看有什么」的页面：效果卡片一张挨一张，节奏是快的。
+设计系统那一节结束之后，再来三段满屏背景，读者的动作已经从「看」变成「滑过去」了 ——
+一个要滚三屏才看完的展品，放在这个位置只能被跳过，那就不如不占这三屏。
+
+撤掉之后页面高 2967px，末尾直接接页脚，不再有「往下滚，它还有两屏」这种承诺。
+
+### 34.2 撤了什么、留了什么
+
+删掉的是 `Craft.tsx` 里两段：设计系统后面的说明段（`id="scroll-backdrop"`），
+以及紧跟其后的 `<ScrollBackdrop>` 演示。顺带清掉随之失效的三个 import 与
+`backdropLayers` 数组（那七行注释讲的是选图标准，已随数组一起移走）。
+
+**组件和素材都没删**：`src/components/effects/ScrollBackdrop.tsx` / `.css` 原样留着，
+`rooftop-sunset.webp` 也在（另外两张 `cloud` / `lotus` 仍被 `lifeSeed` 的生活示例用着，
+本来就不是这条效果独占）。要重新挂上去，加回那段 JSX 即可，
+`docs` 里的 §16 与笔记 `scroll-backdrop` 都还完整记着推导过程。
+
+代价是这三个文件现在没有任何 import —— 打包时被摇掉，不占产物体积，
+但严格说属于死代码。留着的理由很直白：这是一段有完整设计记录的效果，
+删掉组件等于让笔记指向一个空文件。
+
+### 34.3 验证
+
+`tsc` 0、`eslint` 0、构建 26 页、`smoke` ALL RENDER。headless Edge 打开 `dist` 的 `/craft`：
+`document.querySelector('#scroll-backdrop')` 为 null，页面 id 列表到 `design-system` 为止，
+整页截图末尾直接是页脚，没有残线或空白块。
