@@ -18,7 +18,7 @@ npm install
 npx wrangler login
 
 # 2. 建库。输出里有一行 database_id，复制它
-npx wrangler d1 create site-comments
+npm run db:create
 
 # 3. 把 database_id 填进 wrangler.toml
 
@@ -28,6 +28,19 @@ npm run db:init
 # 5. 部署。输出里会给出 https://site-comments.<你的子域>.workers.dev
 npm run deploy
 ```
+
+上面五步的顺序不能调换：没 `login` 的 `db:create` 会直接报未认证；没建库或
+`wrangler.toml` 里还是那串全零占位符时，`db:init` 会报找不到这个 database；
+而没先建表的 `deploy` 虽然能成功，但管理接口一调就 500。
+
+**跑不动时看这两个报错：**
+
+| 报错 | 原因 | 解法 |
+| --- | --- | --- |
+| `'wrangler' 不是内部或外部命令` | `worker/` 有自己的 `node_modules`，根目录装过不代表这里有；`npm run` 只找本目录的 `.bin` | 在这个目录里 `npm install` |
+| `You are not authenticated` | 本机从没登录过，或登录凭证被清掉 | `npx wrangler login` |
+
+`npx wrangler whoami` 可以随时自查当前登录的是哪个账号；换账号后再跑一次 `login`。
 
 ## 不想装 CLI：整套在控制台做
 
