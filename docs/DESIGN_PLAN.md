@@ -1645,3 +1645,52 @@ CSP 的占位符最初放在 `color-scheme` 后面（原内联脚本的位置）
 
 也没有加 Turnstile：不是「忘了」，是 `challenges.cloudflare.com` 在国内经常连不上，
 配了它而脚本加载不出来，整个留言区就废了。这条判断在 §15 就写过，这里没有推翻。
+
+## 33. /me 的两张图换成 reactbits 的原素材（2026-11-05）
+
+### 33.1 换的是哪两张
+
+| 位置 | 原来 | 现在 | 来源 |
+| --- | --- | --- | --- |
+| ScrollExpand 段间图 | `rooftop-sunset.webp` 1920×1030 / 130KB | `forest-walk.webp` 1600×1000 / 169KB | `picsum.photos/seed/scroll-expand/1600/1000` |
+| Lanyard 卡面 | `badge-portrait.webp` 560×868 / 62KB | `lanyard-card.webp` 640×900 / 60KB | 仓库 `src/assets/lanyard/card-front.webp` |
+
+两张都取自 reactbits.dev 对应页面实际渲染的那份素材，不是另找的相似图。
+ScrollExpand 的 demo 在组件源码里 `src = ''`，真正传值的地方是 `src/demo/Animations/ScrollExpandDemo.jsx`；
+Lanyard 则是 `src/demo/Components/LanyardDemo.jsx` 里的三个 import。
+
+### 33.2 为什么新增文件而不是覆盖
+
+`rooftop-sunset.webp` 还在 `/craft` 的 `ScrollBackdrop` 里当背景层之一（§16）。
+直接覆盖会顺手把那一页的背景换掉，而这次只动 `/me`。所以两张都用新名字，
+`badge-portrait.webp` 因为彻底没人引用了才删。
+
+### 33.3 取景要跟着重算
+
+§18.2 里那套 `object-position` 是拿旧图的像素坐标算的：招牌发光字在 x 1025–1163，
+人在 1180–1470，于是手机 64.5% / 平板 74% / 桌面 96% 三档，目的都是「把左边缘推到 1010 附近」。
+新图是居中构图，人物压在正中，任何横向偏置都只会把她推出窗外 —— 三档合并成一条 `50% 50%`。
+
+纵向的 50% 其实不起作用：窗口比图更窄，cover 按高度缩放，上下正好填满、没有多余画面。
+写上去只是让这条规则读起来是「居中」而不是「没写完」。
+
+`mediaZoom` 从桌面 1.25 收回 1（组件的默认值 1.35 更不能用）：旧图要靠 zoom 放大出横向余量
+才能挪位，新图左右对称，放大只会白裁掉两侧的树。
+
+### 33.4 顺带修掉一处重复
+
+`Me.css` 里 `.me .scroll-expand__overlay::before` 那段（带 `radial-gradient` 暗角）前后写了两遍，
+内容一字不差 —— 大概是某次改文案时整段贴了两次。这次动到同一个区域，删掉一份。
+
+### 33.5 关于卡面上的 @davidhaz
+
+`card-front.webp` 是 reactbits 作者本人的工牌卡面，右上角印着 `@davidhaz`。
+工牌背面仍是本站自己那套信息（handle / role / serial），正面现在借用的是这张现成卡面。
+换图是按「用页面上的原素材」来的，如果之后觉得名字对不上，直接换回一张纯人像即可，
+`LanyardBadge` 的 `photo` 只认一张图，不关心内容。
+
+### 33.6 验证
+
+`tsc` 0、`eslint` 0、构建 26 页。headless Edge 截图核对四处：
+桌面 1440 浅色首屏（卡片比例 1:1.4 与原图一致，无拉伸）、段间图起手态与展开态、
+深色主题首屏（白底卡面在深紫背景上对比强但不刺眼）、移动端 390 起手态（人物居中，纵深感保留）。

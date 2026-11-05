@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowRight, ArrowUpRight, Layers, Mail, MessageSquare, PenLine, User } from 'lucide-react'
-import badgePortrait from '@/assets/badge-portrait.webp'
-import rooftopSunset from '@/assets/rooftop-sunset.webp'
+import lanyardCard from '@/assets/lanyard-card.webp'
+import forestWalk from '@/assets/forest-walk.webp'
 import sunsetSky from '@/assets/sunset-sky.webp'
 import { AuroraBackdrop } from '@/components/effects/AuroraBackdrop'
 import DecayCard from '@/components/effects/DecayCard'
@@ -205,7 +205,8 @@ export default function Me() {
           <LanyardBadge
             handle={SITE.github.split('/').pop() ?? 'ME'}
             role="前端 · TypeScript · 构建管线"
-            photo={badgePortrait}
+            photo={lanyardCard}
+            photoAlt="工牌正面：白底上一幅黑白插画人像，右上角印着 @davidhaz"
           />
         </div>
 
@@ -315,20 +316,21 @@ export default function Me() {
       <section aria-label="我的看法">
         {/*
           起手框的形状得跟「视口方向」匹配，不然切出来的是条横穿的切片：
-          桌面 1440×900 下，66×46 得到 950×414 的窗（2.3:1），正从人物腰部横切过去，
-          左边还空出三成栏杆。而这张图的人物在画面 63% 处，cover 在这个尺寸下横向只能挪
-          238px，不缩放根本挪不到中间 —— 所以桌面改成 48×68 的竖构图 + mediaZoom 1.25：
-          图上多出来的那圈余量让画面能横移，人物才被框正。
-          手机是竖屏，横幅起手本来就不合适，保持 66×46 + zoom 1，取景偏置交给 Me.css。
+          桌面 1440×900 下，66×46 得到 950×414 的窗（2.3:1），只会截到人物的一截后背。
+          所以桌面走 48×68 的竖构图 —— 这张图是 1.6:1 的横向原片，竖窗 cover 之后
+          左右各裁掉一大片，留下的正好是「人物 + 头顶向上收拢的树列」，纵深感比横切强。
+          人物在画面正中，左右对称，不需要靠 mediaZoom 去挪位置，所以 zoom 固定 1；
+          组件自己的默认值是 1.35，不显式传就会被放大裁掉两侧的树。
+          手机是竖屏，横幅起手反而合适，保持 66×46。
         */}
         <ScrollExpand
           useWindowScroll
-          src={rooftopSunset}
-          alt="黄昏的天台：一位短发角色坐在折叠椅上，身后是亮着红光的自动售货机、栏杆和城市天际线"
+          src={forestWalk}
+          alt="松林里的一道人影：一位穿深蓝外套的短发女性背对镜头站着，两侧是笔直的松树，远处的小径在薄雾里收拢"
           scrollHint="继续滚动"
           startWidth={isWide ? 48 : 66}
           startHeight={isWide ? 68 : 46}
-          mediaZoom={isWide ? 1.25 : 1}
+          mediaZoom={1}
           startRadius={20}
           scrollDistance={1.1}
           holdDistance={0.2}
