@@ -31,10 +31,13 @@
   --unverified: #4d9dff;
   --evergreen: #34d399;
 
-  /* 主题色：让「工程 / 设计 / 工具链」在列表里就能被眼睛区分，不必读字 */
-  --topic-engineering: #4d8dff;
-  --topic-design: #f472b6;
-  --topic-tooling: #2dd4bf;
+  /* 主题色：六个建造分层各一个色相，顺序就是施工顺序，列表里靠颜色就能读数 */
+  --topic-structure: #4d8dff;
+  --topic-styling: #f472b6;
+  --topic-content: #2dd4bf;
+  --topic-reading: #a78bfa;
+  --topic-motion: #ff9a62;
+  --topic-delivery: #4ade80;
   --topic-misc: #8b93a7;
 
   --code-bg: #0a0f1a;
@@ -83,9 +86,12 @@
   --evergreen: #157f52;
 
   /* 浅色底上同一组色相要压暗一档，否则 4.5:1 达不到 */
-  --topic-engineering: #1d5fd0;
-  --topic-design: #b3277a;
-  --topic-tooling: #0d7d70;
+  --topic-structure: #1d5fd0;
+  --topic-styling: #b3277a;
+  --topic-content: #0d7d70;
+  --topic-reading: #6d4fc4;
+  --topic-motion: #c2571f;
+  --topic-delivery: #15803d;
   --topic-misc: #6b7383;
 
   --code-bg: #f7f8fc;
@@ -116,9 +122,12 @@
   --color-unverified: var(--unverified);
   --color-evergreen: var(--evergreen);
 
-  --color-topic-engineering: var(--topic-engineering);
-  --color-topic-design: var(--topic-design);
-  --color-topic-tooling: var(--topic-tooling);
+  --color-topic-structure: var(--topic-structure);
+  --color-topic-styling: var(--topic-styling);
+  --color-topic-content: var(--topic-content);
+  --color-topic-reading: var(--topic-reading);
+  --color-topic-motion: var(--topic-motion);
+  --color-topic-delivery: var(--topic-delivery);
   --color-topic-misc: var(--topic-misc);
 
   /* 不加载 Inter / 中文字体包：系统栈在中文环境下渲染更稳，也省 300KB */
@@ -319,7 +328,7 @@ html[data-theme='light']::after {
    现在颜色的分工是固定的，不允许组件自由发挥：
 
    - brand / brand-2   动作与身份（按钮、链接、导航下划线、选中态）
-   - topic-*           内容分类（工程蓝 / 设计粉 / 工具链青），只用于"标签级"元素
+   - topic-*           建造分层（结构蓝 / 样式粉 / 内容青 / 阅读紫 / 动效橙 / 交付绿），只用于"标签级"元素
    - decision/warn/…   状态语义，沿用原来的
 
    页面级还有一层 wash：把主题色铺在首屏顶部，越往下越淡。
@@ -379,7 +388,7 @@ html[data-theme='light']::after {
 
 /* 渐变文字：只给一处用（首页那个会被点击的词），多了就廉价 */
 @utility text-gradient {
-  background-image: linear-gradient(100deg, var(--brand-2), var(--brand) 55%, var(--topic-design));
+  background-image: linear-gradient(100deg, var(--brand-2), var(--brand) 55%, var(--topic-styling));
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
@@ -416,7 +425,7 @@ html[data-theme='light']::after {
 }
 
 /* ==========================================================================
-   入场动效：唯一被允许出现在列表页的动效（见 DESIGN_PLAN §4）
+   入场动效：唯一被允许出现在列表页的动效（见 docs/DESIGN_PLAN.md §4）
    ========================================================================== */
 
 [data-reveal] {

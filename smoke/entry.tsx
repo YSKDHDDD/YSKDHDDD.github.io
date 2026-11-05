@@ -25,7 +25,7 @@ const cases: { name: string; path: string; element: ReactNode }[] = [
   { name: 'Retro', path: '/retro', element: <Retro /> },
   { name: 'RetroDetail', path: '/retro/:slug', element: <RetroDetail /> },
   { name: 'Life', path: '/life', element: <Life /> },
-  { name: 'LifeDetail', path: '/life/:id', element: <LifeDetail /> },
+  { name: 'LifeDetail', path: '/life', element: <LifeDetail /> },
   { name: 'Craft', path: '/craft', element: <Craft /> },
   { name: 'About', path: '/about', element: <About /> },
   { name: 'NotFound', path: '/nope', element: <NotFound /> },
@@ -34,7 +34,7 @@ const cases: { name: string; path: string; element: ReactNode }[] = [
 const initialEntries: Record<string, string> = {
   NoteDetail: '/notes/reactbits-audit',
   RetroDetail: '/retro/demo-app-rebuild',
-  LifeDetail: '/life/rooftop-dusk',
+  LifeDetail: '/life?id=smoke',
 }
 
 let failed = 0
@@ -66,7 +66,16 @@ for (const [name, Md] of [
   ['retro.mdx', RebuildRetro],
 ] as const) {
   try {
-    const html = renderToString(<Md components={mdxComponents} />)
+    /*
+     * 套一层 MemoryRouter：MDX 里以 / 开头的链接会被 MDXLink 换成 react-router 的 <Link>，
+     * 裸渲染会直接抛「basename of useContext(...) is null」。真实页面本来就跑在路由里，
+     * 这里补上才是同一个渲染环境 —— 以前没套，是因为正文还没有站内互链。
+     */
+    const html = renderToString(
+      <MemoryRouter>
+        <Md components={mdxComponents} />
+      </MemoryRouter>,
+    )
     const hasCallout = html.includes('待验证') || html.includes('决策')
     const hasCode = html.includes('<pre') || html.includes('data-rehype-pretty-code')
     console.log(`OK   ${name.padEnd(12)} html ${String(html.length).padStart(6)}  callout:${hasCallout} code:${hasCode}`)

@@ -2,7 +2,7 @@
 title: 从 13 个类型错误里读出的结构问题
 date: 2026-10-27
 updated: 2026-10-27
-topic: engineering
+topic: structure
 tags: [typescript, tailwind, refactor]
 status: evergreen
 summary: 一个能跑的页面，为什么 tsc 退出码是 2？顺着 13 个错误摸下去，发现的问题都不在类型层面。
@@ -106,3 +106,5 @@ src/
 - **依赖缺失必须是构建期失败。** 一个引用了不存在插件的 CSS 文件，应该让构建挂掉，而不是静默输出死指令。
 - **不要关掉 `noUnusedLocals`。** 它是最便宜的死代码检测器。
 - **判断"实现了"要看向产物，不是看屏幕。** 缓存会让旧构建看起来像新功能。
+
+结构修完只代表"能跑"。要让它被搜索到、被分享出摘要，还得让每个路由在构建期就产出 HTML —— 见 [预渲染的三道闸门](/notes/prerender-guards)。

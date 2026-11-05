@@ -10,7 +10,7 @@ interface RevealProps {
 }
 
 /**
- * 全站唯一的入场动效（见 DESIGN_PLAN §4）。
+ * 全站唯一的入场动效（见 docs/DESIGN_PLAN.md §4）。
  * 位移只有 8px：读者应该感觉到"内容出现了"，而不是"内容在移动"。
  */
 export function Reveal({ children, as: Tag = 'div', className, delay = 0 }: RevealProps) {

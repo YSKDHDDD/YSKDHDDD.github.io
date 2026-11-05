@@ -2,7 +2,7 @@
 title: 把内容分析搬到构建期：MDX 的一点点编译器魔法
 date: 2026-10-25
 updated: 2026-10-26
-topic: tooling
+topic: content
 tags: [mdx, vite, build]
 status: growing
 summary: 目录、阅读时长、标题锚点这些"能被程序算出来的东西"，不该在浏览器里再算一遍。
@@ -93,5 +93,7 @@ export default function MDXContent(props) { … }
 列表页只读 `meta` 和 `readingTime`，不需要加载正文组件。这也是首屏 JS 能压住的原因：**索引和正文是两条加载路径。**
 
 <Callout type="unverified" title="待验证">
-目前用 `import.meta.glob(..., { eager: true })` 一次性引入全部内容模块。文章到 100 篇以上时，可能需要改成非 eager 加路由级懒加载。现在的规模（8 篇）测不出差别。
+目前用 `import.meta.glob(..., { eager: true })` 一次性引入全部内容模块。文章到 100 篇以上时，可能需要改成非 eager 加路由级懒加载。现在的规模（十几篇）测不出差别。
 </Callout>
+
+构建期这条路只覆盖"我自己写的"内容。读者拖进来的 markdown 在构建时还不存在，只能走另一条路：见 [拖进来的文档，只留在这台设备](/notes/local-docs)。

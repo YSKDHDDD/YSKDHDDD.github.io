@@ -1,16 +1,34 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Boxes, Code2, Images, Sparkles } from 'lucide-react'
+import cloud from '@/assets/cloud.webp'
+import lotus from '@/assets/lotus.webp'
+import rooftopSunset from '@/assets/rooftop-sunset.webp'
 import DecryptedText from '@/components/effects/DecryptedText'
 import { PageWash } from '@/components/common/PageWash'
 import Dock, { type DockItemData } from '@/components/effects/Dock'
 import GlowBorder from '@/components/effects/GlowBorder'
 import GradientWaves from '@/components/effects/GradientWaves'
 import MagneticButton from '@/components/effects/MagneticButton'
+import ScrollBackdrop from '@/components/effects/ScrollBackdrop'
 import SoftAurora from '@/components/effects/SoftAurora'
 import TiltCard from '@/components/effects/TiltCard'
 import { useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
+
+/*
+ * 三张图按「黄昏 → 蓝天 → 绿塘」排：暖橙、蓝白、草绿，色相跨度够大。
+ * 同一色调的两张交叉淡入，看起来只是「变亮了」，看不出是两个图层在互补。
+ *
+ * 选图的标准不是好看，是**低频**：大面积天空、成片荷叶。高细节的图（比如那张
+ * 彩虹灯带天桥）各占一半时会变成一片串扰，再暗的遮罩也救不回来。
+ * 首张 1920 宽撑得住桌面全屏，后两张 900 宽，靠 scrim 和运动压住锐度差。
+ */
+const backdropLayers = [
+  { src: rooftopSunset, alt: '黄昏的天台，一位短发角色坐在折叠椅上，身后是亮着红光的自动售货机与城市天际线' },
+  { src: cloud, alt: '公路上方的蓝天，一大团积云压在天边' },
+  { src: lotus, alt: '满池荷叶上的中式凉亭与回廊，远处是居民楼' },
+]
 
 const dockItems: DockItemData[] = [
   { label: '笔记', icon: <Boxes size={18} aria-hidden />, onClick: () => undefined },
@@ -88,251 +106,293 @@ export default function Craft() {
   const { theme } = useTheme()
 
   return (
-    <div className="page-shell py-12 sm:py-16">
-      <PageWash tone="craft" />
-      <header className="max-w-[72ch]">
-        <p className="font-mono text-label tracking-[0.14em] text-brand-2">CRAFT</p>
-        <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">工艺</h1>
-        <p className="mt-3 text-body text-muted">
-          这里放的是效果的「证据」，不是效果本身。每个都标注了用了什么、为什么留，
-          以及为什么大部分动效被拒绝了。
-        </p>
-      </header>
-
-      <section aria-label="效果展品" className="mt-12 grid gap-4 lg:grid-cols-2">
-        <article
-          id="soft-aurora"
-          className="scroll-mt-24 overflow-hidden rounded-md border border-line"
-        >
-          <div className="relative h-56 bg-bg">
-            <SoftAurora className="absolute inset-0" lightMode={theme === 'light'} quality="medium" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-bg to-transparent" />
-          </div>
-          <div className="border-t border-line p-4">
-            <h2 className="font-mono text-meta text-fg">SoftAurora</h2>
-            <p className="mt-2 text-meta leading-relaxed text-muted">
-              WebGL 片元着色器。/me 首屏用，空闲后才挂载，滚出首屏就随组件卸载。
-              减少动效偏好下直接换成静态渐变，不加载着色器。
-            </p>
-          </div>
-        </article>
-
-        <article
-          id="decrypted-text"
-          className="scroll-mt-24 overflow-hidden rounded-md border border-line"
-        >
-          <div className="grid h-56 place-items-center bg-bg">
-            <span className="text-h2 font-medium text-fg">
-              <DecryptedText text="移过它，就解出来" animateOn="inViewHover" speed={45} />
-            </span>
-          </div>
-          <div className="border-t border-line p-4">
-            <h2 className="font-mono text-meta text-fg">DecryptedText</h2>
-            <p className="mt-2 text-meta leading-relaxed text-muted">
-              逐字用 Canvas 度量字形宽度，避免解密过程中字距跳动。
-              首页只用它解一个词，每 7 秒一次——整句闪烁会变成噪音。
-            </p>
-          </div>
-        </article>
-
-        <article
-          id="gradient-waves"
-          className="scroll-mt-24 overflow-hidden rounded-md border border-line"
-        >
-          <div className="relative h-56 bg-bg">
-            <GradientWaves className="absolute inset-0" speed={0.35} amplitude={11} />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-bg to-transparent" />
-          </div>
-          <div className="border-t border-line p-4">
-            <h2 className="font-mono text-meta text-fg">GradientWaves</h2>
-            <p className="mt-2 text-meta leading-relaxed text-muted">
-              2D Canvas 叠加正弦波。全站只用在一处：404 页。
-              一个一年见一次的效果，才配得上常驻。
-            </p>
-          </div>
-        </article>
-
-        <article
-          id="scroll-expand"
-          className="scroll-mt-24 overflow-hidden rounded-md border border-line"
-        >
-          <div className="grid h-56 place-items-center bg-bg px-6 text-center">
-            <p className="text-meta leading-relaxed text-faint">
-              ScrollExpand 需要一个很长的滚动距离才能演示完整过程，
-              在展位里跑只会得到一帧。所以这里不嵌入 —— 想看完整效果请到首页首屏。
-            </p>
-          </div>
-          <div className="border-t border-line p-4">
-            <h2 className="font-mono text-meta text-fg">ScrollExpand（未嵌入）</h2>
-            <p className="mt-2 text-meta leading-relaxed text-muted">
-              把滚动进度映射成 `width / height / border-radius` 的插值。
-              「不为了展示而展示」也是这条工艺的一部分。
-            </p>
-          </div>
-        </article>
-      </section>
-
-      <section aria-label="交互展品" className="mt-4 grid gap-4 lg:grid-cols-2">
-        <article
-          id="tilt-card"
-          className="scroll-mt-24 overflow-hidden rounded-md border border-line"
-        >
-          <div className="grid h-56 place-items-center bg-bg p-6">
-            <TiltCard className="w-full max-w-[260px] rounded-md">
-              <div className="rounded-md border border-line bg-surface/90 p-5">
-                <p className="font-mono text-label tracking-[0.14em] text-faint">3D TILT</p>
-                <p className="mt-2 text-meta text-fg">把指针移上来</p>
-                <p className="mt-1 text-label leading-relaxed text-muted">
-                  倾斜量跟随指针位置，越靠边缘转得越多。
-                </p>
-              </div>
-            </TiltCard>
-          </div>
-          <div className="border-t border-line p-4">
-            <h2 className="font-mono text-meta text-fg">TiltCard</h2>
-            <p className="mt-2 text-meta leading-relaxed text-muted">
-              指针位置映射成 `rotateX` / `rotateY`，写进 CSS 变量直接改 style ——
-              每帧 setState 在低端机上会把 pointermove 拖成掉帧。悬停时过渡 120ms 跟手，
-              离开时 400ms expo 回弹：同一段 transform，两段手感，靠一个 `:hover` 覆盖时长就够。
-            </p>
-          </div>
-        </article>
-
-        <article
-          id="magnetic-button"
-          className="scroll-mt-24 overflow-hidden rounded-md border border-line"
-        >
-          <div className="grid h-56 place-items-center bg-bg">
-            <MagneticButton>把指针靠近</MagneticButton>
-          </div>
-          <div className="border-t border-line p-4">
-            <h2 className="font-mono text-meta text-fg">MagneticButton</h2>
-            <p className="mt-2 text-meta leading-relaxed text-muted">
-              感应区比按钮本身大一圈，位移是「指针到中心的距离 × 0.34」—— 越靠边缘拉力越大，
-              所以它是磁吸而不是跟随。回弹完全交给 expo 曲线，不用 JS 写 spring：
-              物理感来自曲线形状，不来自逐帧积分。
-            </p>
-          </div>
-        </article>
-
-        <article
-          id="glow-border"
-          className="scroll-mt-24 overflow-hidden rounded-md border border-line lg:col-span-2"
-        >
-          <div className="grid place-items-center bg-bg px-6 py-14">
-            <GlowBorder className="w-full max-w-[420px]">
-              <div className="px-6 py-8 text-center">
-                <p className="font-mono text-label tracking-[0.14em] text-faint">GLOW BORDER</p>
-                <p className="mt-2 text-meta text-fg">光沿边缘匀速走一圈</p>
-              </div>
-            </GlowBorder>
-          </div>
-          <div className="border-t border-line p-4">
-            <h2 className="font-mono text-meta text-fg">GlowBorder</h2>
-            <p className="mt-2 text-meta leading-relaxed text-muted">
-              边框是一维的，用不着 SVG 或 canvas。把角度注册成 `@property` 可插值变量，
-              conic-gradient 的旋转就整段跑在合成器上，主线程零成本。渐变里留两段透明，
-              光才有头和尾 —— 匀速旋转也因此带上了速度感。
-            </p>
-          </div>
-        </article>
-      </section>
-
-      <section id="dock" aria-label="Dock 展品" className="mt-4 scroll-mt-24">
-        <div className="relative h-44 overflow-hidden rounded-md border border-line bg-bg-subtle">
-          <Dock
-            items={dockItems}
-            position="bottom"
-            theme={theme}
-            baseItemSize={40}
-            magnification={62}
-            gap={8}
-            roundness={0.5}
-            showLabels={false}
-          />
-        </div>
-        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-mono text-meta text-fg">Dock</h2>
-          <p className="max-w-[80ch] text-label leading-relaxed text-faint">
-            指针距离驱动的弹性放大。它原本是全站导航，现在只是展品：
-            Dock 的隐喻是「应用切换」，而阅读站需要的是「检索」。
+    <>
+      <div className="page-shell py-12 sm:py-16">
+        <PageWash tone="craft" />
+        <header className="max-w-[72ch]">
+          <p className="font-mono text-label tracking-[0.14em] text-brand-2">CRAFT</p>
+          <h1 className="mt-4 text-h1 font-medium tracking-[-0.02em] text-fg">工艺</h1>
+          <p className="mt-3 text-body text-muted">
+            这里放的是效果的「证据」，不是效果本身。每个都标注了用了什么、为什么留，
+            以及为什么大部分动效被拒绝了。
           </p>
-        </div>
-      </section>
+        </header>
 
-      <section id="design-system" aria-label="设计系统" className="mt-16 scroll-mt-24">
-        <h2 className="border-b border-line pb-3 text-h2 font-medium tracking-[-0.011em] text-fg">
-          设计系统
-        </h2>
-        <p className="mt-3 max-w-[80ch] text-meta text-muted">
-          下面这些不是文档，是真的在跑的那套令牌。切换右上角主题，色板会跟着变。
-        </p>
+        <section aria-label="效果展品" className="mt-12 grid gap-4 lg:grid-cols-2">
+          <article
+            id="soft-aurora"
+            className="scroll-mt-24 overflow-hidden rounded-md border border-line"
+          >
+            <div className="relative h-56 bg-bg">
+              <SoftAurora className="absolute inset-0" lightMode={theme === 'light'} quality="medium" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-bg to-transparent" />
+            </div>
+            <div className="border-t border-line p-4">
+              <h2 className="font-mono text-meta text-fg">SoftAurora</h2>
+              <p className="mt-2 text-meta leading-relaxed text-muted">
+                WebGL 片元着色器。/me 首屏用，空闲后才挂载，滚出首屏就随组件卸载。
+                减少动效偏好下直接换成静态渐变，不加载着色器。
+              </p>
+            </div>
+          </article>
 
-        <div className="mt-8 grid gap-10 lg:grid-cols-2">
-          <div>
-            <h3 className="text-label tracking-[0.06em] text-faint">色彩 · 语义命名</h3>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {swatches.map((swatch) => (
-                <div key={swatch.name} className="overflow-hidden rounded-sm border border-line">
-                  <div className="h-10" style={{ backgroundColor: `var(${swatch.token})` }} />
-                  <div className="px-2 py-1.5">
-                    <div className="font-mono text-label text-fg">{swatch.name}</div>
-                    <div className="text-label text-faint">{swatch.note}</div>
-                  </div>
+          <article
+            id="decrypted-text"
+            className="scroll-mt-24 overflow-hidden rounded-md border border-line"
+          >
+            <div className="grid h-56 place-items-center bg-bg">
+              <span className="text-h2 font-medium text-fg">
+                <DecryptedText text="移过它，就解出来" animateOn="inViewHover" speed={45} />
+              </span>
+            </div>
+            <div className="border-t border-line p-4">
+              <h2 className="font-mono text-meta text-fg">DecryptedText</h2>
+              <p className="mt-2 text-meta leading-relaxed text-muted">
+                逐字用 Canvas 度量字形宽度，避免解密过程中字距跳动。
+                首页只用它解一个词，每 7 秒一次——整句闪烁会变成噪音。
+              </p>
+            </div>
+          </article>
+
+          <article
+            id="gradient-waves"
+            className="scroll-mt-24 overflow-hidden rounded-md border border-line"
+          >
+            <div className="relative h-56 bg-bg">
+              <GradientWaves className="absolute inset-0" speed={0.35} amplitude={11} />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-bg to-transparent" />
+            </div>
+            <div className="border-t border-line p-4">
+              <h2 className="font-mono text-meta text-fg">GradientWaves</h2>
+              <p className="mt-2 text-meta leading-relaxed text-muted">
+                2D Canvas 叠加正弦波。全站只用在一处：404 页。
+                一个一年见一次的效果，才配得上常驻。
+              </p>
+            </div>
+          </article>
+
+          <article
+            id="scroll-expand"
+            className="scroll-mt-24 overflow-hidden rounded-md border border-line"
+          >
+            <div className="grid h-56 place-items-center bg-bg px-6 text-center">
+              <p className="text-meta leading-relaxed text-faint">
+                ScrollExpand 需要一个很长的滚动距离才能演示完整过程，
+                在展位里跑只会得到一帧。所以这里不嵌入 —— 想看完整效果请到首页首屏。
+              </p>
+            </div>
+            <div className="border-t border-line p-4">
+              <h2 className="font-mono text-meta text-fg">ScrollExpand（未嵌入）</h2>
+              <p className="mt-2 text-meta leading-relaxed text-muted">
+                把滚动进度映射成 `width / height / border-radius` 的插值。
+                「不为了展示而展示」也是这条工艺的一部分。
+              </p>
+            </div>
+          </article>
+        </section>
+
+        <section aria-label="交互展品" className="mt-4 grid gap-4 lg:grid-cols-2">
+          <article
+            id="tilt-card"
+            className="scroll-mt-24 overflow-hidden rounded-md border border-line"
+          >
+            <div className="grid h-56 place-items-center bg-bg p-6">
+              <TiltCard className="w-full max-w-[260px] rounded-md">
+                <div className="rounded-md border border-line bg-surface/90 p-5">
+                  <p className="font-mono text-label tracking-[0.14em] text-faint">3D TILT</p>
+                  <p className="mt-2 text-meta text-fg">把指针移上来</p>
+                  <p className="mt-1 text-label leading-relaxed text-muted">
+                    倾斜量跟随指针位置，越靠边缘转得越多。
+                  </p>
                 </div>
-              ))}
+              </TiltCard>
             </div>
-            <p className="mt-3 text-label leading-relaxed text-faint">
-              组件里只允许出现语义名，不允许出现 indigo-500 这类色板名 —— 换主题时不需要改任何组件。
+            <div className="border-t border-line p-4">
+              <h2 className="font-mono text-meta text-fg">TiltCard</h2>
+              <p className="mt-2 text-meta leading-relaxed text-muted">
+                指针位置映射成 `rotateX` / `rotateY`，写进 CSS 变量直接改 style ——
+                每帧 setState 在低端机上会把 pointermove 拖成掉帧。悬停时过渡 120ms 跟手，
+                离开时 400ms expo 回弹：同一段 transform，两段手感，靠一个 `:hover` 覆盖时长就够。
+              </p>
+            </div>
+          </article>
+
+          <article
+            id="magnetic-button"
+            className="scroll-mt-24 overflow-hidden rounded-md border border-line"
+          >
+            <div className="grid h-56 place-items-center bg-bg">
+              <MagneticButton>把指针靠近</MagneticButton>
+            </div>
+            <div className="border-t border-line p-4">
+              <h2 className="font-mono text-meta text-fg">MagneticButton</h2>
+              <p className="mt-2 text-meta leading-relaxed text-muted">
+                感应区比按钮本身大一圈，位移是「指针到中心的距离 × 0.34」—— 越靠边缘拉力越大，
+                所以它是磁吸而不是跟随。回弹完全交给 expo 曲线，不用 JS 写 spring：
+                物理感来自曲线形状，不来自逐帧积分。
+              </p>
+            </div>
+          </article>
+
+          <article
+            id="glow-border"
+            className="scroll-mt-24 overflow-hidden rounded-md border border-line lg:col-span-2"
+          >
+            <div className="grid place-items-center bg-bg px-6 py-14">
+              <GlowBorder className="w-full max-w-[420px]">
+                <div className="px-6 py-8 text-center">
+                  <p className="font-mono text-label tracking-[0.14em] text-faint">GLOW BORDER</p>
+                  <p className="mt-2 text-meta text-fg">光沿边缘匀速走一圈</p>
+                </div>
+              </GlowBorder>
+            </div>
+            <div className="border-t border-line p-4">
+              <h2 className="font-mono text-meta text-fg">GlowBorder</h2>
+              <p className="mt-2 text-meta leading-relaxed text-muted">
+                边框是一维的，用不着 SVG 或 canvas。把角度注册成 `@property` 可插值变量，
+                conic-gradient 的旋转就整段跑在合成器上，主线程零成本。渐变里留两段透明，
+                光才有头和尾 —— 匀速旋转也因此带上了速度感。
+              </p>
+            </div>
+          </article>
+        </section>
+
+        <section id="dock" aria-label="Dock 展品" className="mt-4 scroll-mt-24">
+          <div className="relative h-44 overflow-hidden rounded-md border border-line bg-bg-subtle">
+            <Dock
+              items={dockItems}
+              position="bottom"
+              theme={theme}
+              baseItemSize={40}
+              magnification={62}
+              gap={8}
+              roundness={0.5}
+              showLabels={false}
+            />
+          </div>
+          <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-mono text-meta text-fg">Dock</h2>
+            <p className="max-w-[80ch] text-label leading-relaxed text-faint">
+              指针距离驱动的弹性放大。它原本是全站导航，现在只是展品：
+              Dock 的隐喻是「应用切换」，而阅读站需要的是「检索」。
             </p>
           </div>
+        </section>
 
-          <div>
-            <h3 className="text-label tracking-[0.06em] text-faint">字阶 · 只有 400 / 500 两个字重</h3>
-            <ul className="mt-3 divide-y divide-line border-y border-line">
-              {typeScale.map((row) => (
-                <li key={row.name} className="flex items-baseline gap-4 py-2">
-                  <span className="w-14 shrink-0 font-mono text-label text-faint">{row.name}</span>
-                  <span className={cn('truncate font-medium text-fg', row.className)}>可读性</span>
-                  <span className="ml-auto font-mono text-label text-faint">{row.size}</span>
+        <section id="design-system" aria-label="设计系统" className="mt-16 scroll-mt-24">
+          <h2 className="border-b border-line pb-3 text-h2 font-medium tracking-[-0.011em] text-fg">
+            设计系统
+          </h2>
+          <p className="mt-3 max-w-[80ch] text-meta text-muted">
+            下面这些不是文档，是真的在跑的那套令牌。切换右上角主题，色板会跟着变。
+          </p>
+
+          <div className="mt-8 grid gap-10 lg:grid-cols-2">
+            <div>
+              <h3 className="text-label tracking-[0.06em] text-faint">色彩 · 语义命名</h3>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {swatches.map((swatch) => (
+                  <div key={swatch.name} className="overflow-hidden rounded-sm border border-line">
+                    <div className="h-10" style={{ backgroundColor: `var(${swatch.token})` }} />
+                    <div className="px-2 py-1.5">
+                      <div className="font-mono text-label text-fg">{swatch.name}</div>
+                      <div className="text-label text-faint">{swatch.note}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-label leading-relaxed text-faint">
+                组件里只允许出现语义名，不允许出现 indigo-500 这类色板名 —— 换主题时不需要改任何组件。
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-label tracking-[0.06em] text-faint">字阶 · 只有 400 / 500 两个字重</h3>
+              <ul className="mt-3 divide-y divide-line border-y border-line">
+                {typeScale.map((row) => (
+                  <li key={row.name} className="flex items-baseline gap-4 py-2">
+                    <span className="w-14 shrink-0 font-mono text-label text-faint">{row.name}</span>
+                    <span className={cn('truncate font-medium text-fg', row.className)}>可读性</span>
+                    <span className="ml-auto font-mono text-label text-faint">{row.size}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-label tracking-[0.06em] text-faint">动效 · 三档时长，可点播</h3>
+              <div className="mt-3">
+                <MotionDemo />
+              </div>
+              <p className="mt-3 text-label leading-relaxed text-faint">
+                时长写进 `--motion-*` 变量，组件不许自己编。
+                `prefers-reduced-motion` 下退化为静态首帧，而不是把速度调快。
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-label tracking-[0.06em] text-faint">栅格 · 两个容器宽度</h3>
+              <ul className="mt-3 space-y-2 font-mono text-meta">
+                <li className="flex justify-between border-b border-line pb-2">
+                  <span className="text-fg">1280px</span>
+                  <span className="text-faint">列表 / 工艺</span>
                 </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-label tracking-[0.06em] text-faint">动效 · 三档时长，可点播</h3>
-            <div className="mt-3">
-              <MotionDemo />
+                <li className="flex justify-between border-b border-line pb-2">
+                  <span className="text-fg">760px</span>
+                  <span className="text-faint">阅读列（笔记 / 复盘 / 留言）</span>
+                </li>
+              </ul>
+              <Link
+                to="/notes/reading-width"
+                className="mt-3 inline-flex items-center gap-1 text-label text-muted transition-colors hover:text-fg"
+              >
+                <ArrowLeft className="h-3 w-3 rotate-180" aria-hidden />
+                为什么是 760：推导过程
+              </Link>
             </div>
-            <p className="mt-3 text-label leading-relaxed text-faint">
-              时长写进 `--motion-*` 变量，组件不许自己编。
-              `prefers-reduced-motion` 下退化为静态首帧，而不是把速度调快。
+          </div>
+        </section>
+        <section
+          id="scroll-backdrop"
+          aria-label="ScrollBackdrop 展品"
+          className="mt-16 scroll-mt-24 border-t border-line pt-8"
+        >
+          <h2 className="text-h2 font-medium tracking-[-0.011em] text-fg">ScrollBackdrop</h2>
+          <p className="mt-3 max-w-[80ch] text-meta leading-relaxed text-muted">
+            滚动驱动的背景序列：吸顶舞台不动，三层背景按同一个进度交叉淡入。
+            上一张是被下一张接过去的，不是被换掉的。下面这一段占三屏 —— 继续往下滚。
+          </p>
+          <p className="mt-3 max-w-[80ch] text-label leading-relaxed text-faint">
+            逐帧只写 opacity 与 transform。斜切模式才动 clip-path，而且只在 0 &lt; opacity &lt; 1
+            的交接区间里写，静止帧一律置 none —— 重绘成本被限制在过渡那一段。
+            prefers-reduced-motion 下停在第一帧，滚动距离与版面高度都不变。
+          </p>
+        </section>
+      </div>
+
+      <section aria-label="滚动背景序列演示" className="border-t border-line">
+        <ScrollBackdrop
+          layers={backdropLayers}
+          hold={0.24}
+          parallax={56}
+          split={46}
+          smoothing={0.09}
+          scrim={0.68}
+        >
+          <div className="max-w-[34rem] [text-shadow:0_2px_20px_rgba(0,0,0,0.55)]">
+            <p className="font-mono text-label tracking-[0.14em] text-white/60">SCROLL BACKDROP</p>
+            <p className="mt-3 text-[clamp(1.5rem,3.2vw,2.2rem)] leading-[1.22] font-medium tracking-[-0.02em] text-white">
+              背景不是被换掉的，
+              <br />
+              是被下一层接过去的。
+            </p>
+            <p className="mt-4 max-w-[46ch] text-[15px] leading-[1.7] text-white/80">
+              三层共享同一个进度 t：相邻两层的透明度在交接区间里互补，再叠一层上下错位和一道斜切，
+              所以看不到「切换」那一帧。往后滚，它还有两屏。
             </p>
           </div>
-
-          <div>
-            <h3 className="text-label tracking-[0.06em] text-faint">栅格 · 两个容器宽度</h3>
-            <ul className="mt-3 space-y-2 font-mono text-meta">
-              <li className="flex justify-between border-b border-line pb-2">
-                <span className="text-fg">1280px</span>
-                <span className="text-faint">列表 / 工艺</span>
-              </li>
-              <li className="flex justify-between border-b border-line pb-2">
-                <span className="text-fg">760px</span>
-                <span className="text-faint">阅读列（笔记 / 复盘 / 留言）</span>
-              </li>
-            </ul>
-            <Link
-              to="/notes/reading-width"
-              className="mt-3 inline-flex items-center gap-1 text-label text-muted transition-colors hover:text-fg"
-            >
-              <ArrowLeft className="h-3 w-3 rotate-180" aria-hidden />
-              为什么是 760：推导过程
-            </Link>
-          </div>
-        </div>
+        </ScrollBackdrop>
       </section>
-    </div>
+    </>
   )
 }

@@ -1,0 +1,94 @@
+---
+title: 预渲染的三道闸门：宁可构建失败，也不发布空壳
+date: 2026-10-30
+updated: 2026-10-30
+topic: delivery
+tags: [prerender, ssr, seo]
+status: evergreen
+summary: renderToString 返回成功，不等于页面有内容。占位块、骨架、正文过短，这三种"没渲染完"必须让构建挂掉。
+---
+
+纯客户端渲染的站，HTML 里只有一个空 `<div id="root">`。搜索引擎拿到空页、分享链接没有摘要、RSS 无从生成——这三件事都不是"以后再补"能解决的，所以在构建期把每个路由渲染成真正的 HTML。
+
+流程本身很短：
+
+```text
+vite build            产出 dist/index.html（带哈希的模板）
+vite build --ssr      产出 dist-ssr/entry.js
+node scripts/prerender.mjs
+  1. 读模板，保留 script / link 标签
+  2. 逐路由 renderToString
+  3. 替换 head 的 title + description
+  4. 写进 dist/<path>/index.html
+```
+
+真正花时间的不是第 2 步，是**怎么知道第 2 步真的成功了**。
+
+## 渲染不报错，页面可能是空的
+
+`renderToString` 只要不抛异常就会返回字符串。而下面三种情况都不抛异常：
+
+| 现象 | 产物里的痕迹 | 后果 |
+| --- | --- | --- |
+| 路由级懒加载没解析 | `<template id="B:` / `<div hidden id="S:` | 流式 SSR 的分块结构，正文在 JS 里 |
+| 骨架屏还在 | `aria-busy="true"` | 爬虫看到的是一排灰条 |
+| 正文被条件挡掉 | 文本长度接近 0 | 页面有标题、没有内容 |
+
+第一种最阴：本地开发时懒加载正常，只有静态渲染那一趟才露出来。
+
+## 三道闸门
+
+`scripts/prerender.mjs` 在写文件之前依次检查，任何一道不过就 `process.exit(1)`：
+
+```js
+if (html.includes('<template id="B:') || html.includes('<div hidden id="S:')) {
+  console.error(`✗ ${route.path} 渲染结果含 Suspense 占位块（有懒加载没解析），静态 HTML 里没有正文`)
+  process.exit(1)
+}
+if (html.includes('aria-busy="true"')) {
+  console.error(`✗ ${route.path} 渲染结果仍是骨架 fallback`)
+  process.exit(1)
+}
+
+const textLength = html.replace(/<[^>]+>/g, '').trim().length
+if (textLength < 200 && !route.noindex) {
+  console.error(`✗ ${route.path} 渲染出的正文只有 ${textLength} 字符，疑似空页`)
+  process.exit(1)
+}
+```
+
+失败信息里带上路由，字数那道还带上实际字数，是因为这条报错通常出现在加完新页面之后：知道是哪一个、差多少，才不用二分查找。
+
+<Callout type="decision" title="为什么是 200 字">
+它不是质量线，是"一屏正文"的下限。低于这个数，页面要么是空壳，要么真的只有一句话——后者应该合并进别的页面，而不是单独占一个 URL。
+</Callout>
+
+## noindex 是例外，但不是免检
+
+`/local` 的正文要等浏览器读到 IndexedDB 才有，静态渲染时必然是空的。所以字数闸门对它跳过，`/archive`（旧地址跳转页）同理。
+
+但前两道**仍然生效**：Suspense 占位和骨架都意味着"渲染没跑完"，跟页面类型无关。例外只放宽一条，不放宽全部。
+
+## 顺手产出的三件套
+
+同一趟构建还会写 `sitemap.xml`、`rss.xml`、`robots.txt`：
+
+- sitemap 过滤掉 `noindex` 的路由——列进去再标 noindex 是自相矛盾；
+- RSS 只收笔记与复盘，生活页没有 feed；
+- `robots.txt` 里写死 sitemap 地址，省得每次手动提交。
+
+<Callout type="warn" title="域名写错是最常见的上线事故">
+`VITE_SITE_URL` 没配时，canonical、sitemap、RSS 里全是 `localhost`，爬虫一条都进不来。脚本选择**只警告、不失败**：本地构建不该被逼着配线上域名。但发布日志里必须能看见那条警告。
+</Callout>
+
+## 预渲染和 hydration 必须算同一道题
+
+静态产物和客户端拿到的是同一棵 DOM 树，任何"每次运行结果不同"的表达式都会造成 mismatch。三条约束：
+
+1. **不要用 `Date.now()` / `Math.random()` 渲染内容**。需要构建时刻就用 `__BUILD_TIME__`（`vite define` 注入），两端同一个数。
+2. **不要用 `localeCompare` 排序**。它依赖运行时 ICU，Node 和浏览器的结果可能不同——排序一变，列表顺序就错位。`lib/content.ts` 里的排序全是数值比较。
+3. **主题的服务端快照固定为 `dark`**。浏览器首帧再由内联脚本改，静态 HTML 因此稳定可缓存。
+
+<Callout type="unverified" title="待验证">
+三道闸门只覆盖"有没有内容"，不覆盖"内容对不对"。标题与正文错位、摘要串到别的文章，目前只能靠人工看截图。也许可以加一条断言：页面 `<title>` 必须出现在正文里。
+</Callout>

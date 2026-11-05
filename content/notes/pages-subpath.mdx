@@ -1,0 +1,78 @@
+---
+title: 部署到 /仓库名/ 之后，路径不能再说「相对于我」
+date: 2026-10-31
+updated: 2026-10-31
+topic: delivery
+tags: [github-pages, base, caching]
+status: growing
+summary: 项目站点不在域名根下。base 写成相对路径会在 /notes/xxx/ 里解析错，写成空串会退化成协议相对地址。
+---
+
+本地跑得好好的站，推到 GitHub Pages 之后整页白屏，控制台一排 404。原因通常只有一行：`base`。
+
+## 三种写法，两种是错的
+
+| 写法 | 结果 |
+| --- | --- |
+| `base: '/'` | 资源指向 `https://用户名.github.io/assets/…`，少了仓库名 |
+| `base: './'` | 首页正常，进到 `/notes/xxx/` 之后解析成 `/notes/xxx/assets/…` |
+| `base: ''` | Vite 拼出 `//assets/…`，浏览器当成协议相对地址，请求 `https://assets/…` |
+
+`''` 这条最容易被忽略：`//` 在 HTML 里不是"当前目录"，是一个省略协议的绝对地址。
+
+## 推导 base 的三行
+
+Vite 要求 base「以 `/` 开头、以 `/` 结尾」，而 CI 注入的值可能两头都不带：
+
+```ts
+function normalizeBase(raw: string | undefined) {
+  const trimmed = (raw ?? '').replace(/^\/+|\/+$/g, '')
+  return trimmed ? `/${trimmed}/` : '/'
+}
+```
+
+第三行的空值分支是给"部署在自定义域名根路径"准备的：此时 `trimmed` 是空串，返回 `/`，而不是 `//`。
+
+值来自 `actions/configure-pages` 输出的 `base_path`，经 `loadEnv` 读入——不能用 `process.env`，Vite 只把 `.env` 注入客户端，两者的取值时机不一样。
+
+## 为什么必须是绝对路径
+
+预渲染会把 `dist/index.html` 复制到每个路由目录下：`dist/notes/reading-width/index.html`。如果资源是 `./assets/x.js`，浏览器在 `/notes/reading-width/` 这层解析，拼出 `/notes/reading-width/assets/x.js`——那个目录里没有资源。
+
+绝对路径 `/<repo>/assets/x.js` 在任何深度都指向同一处。**这是预渲染和相对路径的硬冲突**，不是风格问题。
+
+<Callout type="decision" title="判断">
+用相对路径的前提是"HTML 的位置固定"。一旦同一份 HTML 被复制到不同深度，这个前提就没了。
+</Callout>
+
+## 缓存：两类文件，两种策略
+
+`public/_headers` 只写两条规则：
+
+```text
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+```
+
+带哈希的资源文件名一变 URL 就变，可以永久缓存；HTML 必须每次回源校验，否则发文后访客看到的还是旧页面。RSS 与 sitemap 给了 1 小时——它们更新频率低于 HTML，但也不能缓存一天。
+
+<Callout type="warn" title="GitHub Pages 会忽略 _headers">
+这个文件在 GitHub Pages 上不生效，那边没有自定义响应头的能力。保留它只是为了将来换到 Cloudflare Pages 或 Netlify 时能直接用——**不要以为线上真的带上了这些头**。
+</Callout>
+
+## 上线之后的三条自检
+
+```bash
+curl -sI https://你的地址/notes/<某篇>/ | head -1     # 200，不是 404
+curl -s  https://你的地址/notes/<某篇>/ | grep '<title>'  # 文章标题，不是站点名
+curl -s  https://你的地址/sitemap.xml | head -5          # 域名是线上域名
+```
+
+第二条能同时验证两件事：预渲染跑了、head 替换对了。第三条能抓到最常见的上线事故——`VITE_SITE_URL` 忘了配，canonical、sitemap、RSS 里全是 `localhost`。
+
+<Callout type="unverified" title="待验证">
+只在 GitHub Pages 和本地 `vite preview` 上验过。Cloudflare Pages 的 `_headers` 语法兼容，但 404 回退行为不同（它支持 SPA fallback），换平台时那部分要重新测。
+</Callout>

@@ -1,0 +1,75 @@
+/*
+ * 滚动背景序列。轨道高度由层数与「每层几屏」算出来，舞台吸顶不动。
+ *
+ * 高度用乘法写进 calc，是为了让预渲染出来的 HTML 一开始就有正确高度：
+ * 如果等 JS 挂载后再设，页面会先短后长，下面的内容被推一下。
+ */
+.scroll-backdrop {
+  position: relative;
+  width: 100%;
+  height: calc(var(--sb-layers, 3) * var(--sb-screens, 1) * 100vh);
+  height: calc(var(--sb-layers, 3) * var(--sb-screens, 1) * 100svh);
+  --sb-scrim: 0.55;
+}
+
+.scroll-backdrop__stage {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--bg);
+}
+
+.scroll-backdrop__layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: center;
+  will-change: opacity, transform;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/*
+ * JS 未执行时的首帧：第一层直接可见，其余透明。
+ * 写成 CSS 而不是内联 style —— 内联会和每帧写入的 opacity 打架，
+ * 父组件一重渲染就会把进度覆盖回去，表现为画面闪回第一张。
+ */
+.scroll-backdrop__layer:first-child {
+  opacity: 1;
+}
+
+/* clip-path 会触发重绘，只在斜切模式里允许它参与合成提示 */
+.scroll-backdrop--split .scroll-backdrop__layer {
+  will-change: opacity, transform, clip-path;
+}
+
+.scroll-backdrop__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--sb-scrim);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.82),
+    rgba(0, 0, 0, 0.18) 48%,
+    rgba(0, 0, 0, 0.42)
+  );
+}
+
+/* 文字压在照片上，只负责排版位置；对比度交给上面的 scrim */
+.scroll-backdrop__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 clamp(1.5rem, 6vw, 5rem) clamp(2.5rem, 12vh, 7rem);
+  pointer-events: none;
+}

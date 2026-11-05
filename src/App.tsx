@@ -7,8 +7,7 @@ import {
   Craft,
   Home,
   ImportPage,
-  Life,
-  LifeDetail,
+  LifeRoute,
   LocalDoc,
   Me,
   NoteDetail,
@@ -37,8 +36,7 @@ export default function App() {
           <Route path="local" element={<LocalDoc />} />
           <Route path="retro" element={<Retro />} />
           <Route path="retro/:slug" element={<RetroDetail />} />
-          <Route path="life" element={<Life />} />
-          <Route path="life/:id" element={<LifeDetail />} />
+          <Route path="life" element={<LifeRoute />} />
           <Route path="import" element={<ImportPage />} />
           <Route path="craft" element={<Craft />} />
           <Route path="about" element={<About />} />

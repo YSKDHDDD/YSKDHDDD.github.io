@@ -1,10 +1,9 @@
 import { ChevronDown } from 'lucide-react'
-import { topicLabels, type TopicId } from '@/lib/content'
+import { topicLabels, topicOrder, type TopicId } from '@/lib/content'
 import { topicTone } from '@/lib/tone'
 import { cn } from '@/lib/utils'
 
 /** 下拉里的顺序固定，不按当前值排 —— 位置固定的选项才能靠肌肉记忆选中 */
-const ORDER: TopicId[] = ['engineering', 'design', 'tooling', 'misc']
 
 /**
  * 主题选择器。
@@ -49,7 +48,7 @@ export function TopicPicker({
           'focus-visible:outline-none',
         )}
       >
-        {ORDER.map((topic) => (
+        {topicOrder.map((topic) => (
           <option key={topic} value={topic}>
             {topicLabels[topic]}
           </option>

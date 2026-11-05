@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 /**
- * 阅读页唯一随滚动变化的东西（DESIGN_PLAN §4）。
+ * 阅读页唯一随滚动变化的东西（docs/DESIGN_PLAN.md §4）。
  * 用 scaleX 而不是 width：只动 transform，不触发布局。
  */
 export function ReadingProgress() {

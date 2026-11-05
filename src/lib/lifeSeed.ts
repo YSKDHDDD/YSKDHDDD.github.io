@@ -1,48 +1,49 @@
 /**
- * 「生活」的内容源。
+ * 生活页的六条示例记录。
  *
- * 和笔记/复盘分开：那两处是**结论**，这里是**证据** —— 没有论点、不标成熟度、
- * 不需要读完，只用来证明写代码的人还出门。
+ * 它们不属于「内容」，也不属于用户数据 —— 是随手点进来时该看到的东西。
+ * 第一次打开生活页时由 `lifeStore` 一次性写进 IndexedDB（见 `seedIfEmpty`），
+ * 写完之后就和用户自己上传的记录没有区别：同样的卡片、同样的详情页、同样能删。
  *
- * 每条分两层：
- * - `note` 一句话，只够印在卡片上；
- * - `story` 若干段，点进去才看 —— 卡片的灰照片加一句摘要，是这个页面的口气；
- *   真要看那张图到底拍到了什么，得点开。
+ * 之所以走「播种进库」而不是在渲染时拼一个静态数组：
+ * - 静态数组删不掉，页面会变成「示例删不完、自己的能删」的两套规则；
+ * - 拼数组还要处理「删除后又被拼回来」，得额外存墓碑；
+ * - 排序、编号、上一条/下一条全都在 entries 上算，多一个来源就要多改五处。
  *
- * `photo` 是 `src/assets/moments/` 里的实拍（统一裁成 3:2、900 宽、WebP）；
- * 留空则退回 `momentPhoto` 现画的虚焦光斑，所以增删条目不会出现空框。
+ * 播种只发生一次（本机库里非空、或 localStorage 有标记就跳过），所以删掉之后
+ * 刷新也不会再长出来 —— 那是用户的选择，不该被一段示例数据推翻。
  *
- * 顺序即展示顺序，日期递减 —— 卡片上印着日期，乱序会显得随意。
- * 季节也要对得上：荷塘在八月，晚霞在十月。
+ * 图是 `src/assets/` 里的实拍，统一 900×600 WebP；比详情页容器（900）略有余量。
+ * 云和荷塘两张同时被 `/craft` 的滚动背景用着，留在 `assets/` 根，这里直接引用。
  */
 
 import bridgeNight from '@/assets/moments/bridge-n.webp'
-import cloud from '@/assets/moments/cloud.webp'
 import collab from '@/assets/moments/collab.webp'
 import dusk from '@/assets/moments/dusk.webp'
-import lotus from '@/assets/moments/lotus.webp'
 import rainWindow from '@/assets/moments/rain-win.webp'
+import cloud from '@/assets/cloud.webp'
+import lotus from '@/assets/lotus.webp'
 
-export interface Moment {
+export interface LifeSeed {
   id: string
-  /** 一句话，尽量具体到能看见画面 */
   title: string
-  /** 比标题多给一点：温度、时间、当时在想什么 */
   note: string
-  /** 详情页正文。一段一件事，不抒情 —— 这里补的是卡片上没地方放的具体。 */
   story: string[]
   place: string
-  /** 拍下这张的时刻，详情页头部的元信息之一 */
   time: string
-  /** ISO，便于排序与格式化 */
   date: string
-  /** 真照片；留空则由 momentPlaceholder 顶替 */
-  photo?: string
-  /** 卡片描边与详情页标记色，用现成的语义色变量，不额外定义新颜色 */
+  /** 打包进站点的静态资源，播种时 fetch 成 Blob 再入库 */
+  src: string
+  width: number
+  height: number
   tone: string
 }
 
-export const moments: Moment[] = [
+/**
+ * 顺序即展示顺序，日期递减 —— 卡片上印着日期，乱序会显得随意。
+ * 季节也要对得上：荷塘在八月，晚霞在十月。
+ */
+export const lifeSeeds: LifeSeed[] = [
   {
     id: 'rooftop-dusk',
     title: '屋顶那二十分钟',
@@ -55,7 +56,9 @@ export const moments: Moment[] = [
     place: '天台',
     time: '18:12',
     date: '2026-10-18',
-    photo: dusk,
+    src: dusk,
+    width: 900,
+    height: 600,
     tone: 'var(--decision)',
   },
   {
@@ -70,8 +73,10 @@ export const moments: Moment[] = [
     place: '往北的路上',
     time: '15:40',
     date: '2026-10-11',
-    photo: cloud,
-    tone: 'var(--topic-tooling)',
+    src: cloud,
+    width: 900,
+    height: 600,
+    tone: 'var(--topic-delivery)',
   },
   {
     id: 'color-bridge',
@@ -85,8 +90,10 @@ export const moments: Moment[] = [
     place: '过街天桥',
     time: '20:36',
     date: '2026-09-28',
-    photo: bridgeNight,
-    tone: 'var(--topic-design)',
+    src: bridgeNight,
+    width: 900,
+    height: 600,
+    tone: 'var(--topic-styling)',
   },
   {
     id: 'saved-collab',
@@ -100,7 +107,9 @@ export const moments: Moment[] = [
     place: '相册',
     time: '14:05',
     date: '2026-09-20',
-    photo: collab,
+    src: collab,
+    width: 900,
+    height: 600,
     tone: 'var(--decision)',
   },
   {
@@ -115,7 +124,9 @@ export const moments: Moment[] = [
     place: '屏幕',
     time: '16:20',
     date: '2026-09-07',
-    photo: rainWindow,
+    src: rainWindow,
+    width: 900,
+    height: 600,
     tone: 'var(--topic-misc)',
   },
   {
@@ -130,19 +141,9 @@ export const moments: Moment[] = [
     place: '城南公园',
     time: '13:48',
     date: '2026-08-02',
-    photo: lotus,
+    src: lotus,
+    width: 900,
+    height: 600,
     tone: 'var(--brand-2)',
   },
 ]
-
-/** 详情页按 id 取一条；找不到返回 undefined，由页面自己给 404 态 */
-export function getMoment(id: string): Moment | undefined {
-  return moments.find((moment) => moment.id === id)
-}
-
-/** 上一条 / 下一条。数组按日期递减，所以 newer 在数组里更靠前。 */
-export function getMomentNeighbours(id: string): { newer?: Moment; older?: Moment } {
-  const index = moments.findIndex((moment) => moment.id === id)
-  if (index === -1) return {}
-  return { newer: moments[index - 1], older: moments[index + 1] }
-}

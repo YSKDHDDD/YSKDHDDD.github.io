@@ -1,7 +1,7 @@
 import { flushSync } from 'react-dom'
 
 /**
- * 路由切换过渡（DESIGN_PLAN §4 的 enter 档）。
+ * 路由切换过渡（docs/DESIGN_PLAN.md §4 的 enter 档）。
  *
  * 为什么不用 CSS 入场动画：那会和 Reveal 叠成两层淡入 —— 容器淡入时里面元素还是
  * opacity:0，等 Reveal 再触发，首屏读起来像"一直在加载"。View Transitions 做的是

@@ -2,7 +2,7 @@
 title: Tailwind v4 接入：从「指令」到「导入」的一行之差
 date: 2026-10-24
 updated: 2026-10-26
-topic: tooling
+topic: styling
 tags: [tailwind, vite, build]
 status: growing
 summary: v3 的 @tailwind 指令在 v4 里已经不存在了。写错不会报错，只会让你的样式静默消失。
@@ -87,6 +87,8 @@ v4 的 `@theme` 会把变量变成工具类，但**它默认是静态的**：切
 <Callout type="decision" title="为什么不用 class 切换">
 `class="dark"` 需要 `dark:` 前缀铺满全站，改色板要改所有组件。变量方案只需要改一处定义，组件里永远是 `bg-surface`、`text-muted` 这类语义名。
 </Callout>
+
+完整的切换链路——首帧内联脚本、`useSyncExternalStore`、两套变量的维护纪律——单独记在 [主题切换不该经过 React](/notes/theme-cascade)。
 
 <Callout type="unverified" title="待验证">
 `@theme inline` 在同时使用 `@utility` 自定义工具类时的解析顺序，我没有完整测过。目前项目里的自定义类都是纯 CSS，没依赖 Tailwind 变量。

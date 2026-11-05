@@ -3,7 +3,6 @@ import { StaticRouter } from 'react-router-dom'
 import App from '@/App'
 import { notes, retros } from '@/lib/content'
 import { headTags, resolveMeta } from '@/lib/meta'
-import { moments } from '@/lib/moments'
 import { SITE } from '@/lib/site'
 
 /**
@@ -44,10 +43,10 @@ export function getStaticPaths(): StaticPath[] {
     ...notes.map((note) => ({ path: `/notes/${note.slug}`, priority: 0.7, changefreq: 'monthly' })),
     ...retros.map((retro) => ({ path: `/retro/${retro.slug}`, priority: 0.6, changefreq: 'monthly' })),
     /*
-      生活的单条记录。它们不进 RSS（那份 feed 是给「文章」的，照片不该混进去），
-      但都要有真实文件：/life/xxx 直接访问落到 404.html 的话，刷新会闪一下错误页。
+      生活没有单条路径：记录存在访客自己的 IndexedDB 里，构建期根本不知道有哪些，
+      地址也统一成 /life?id=xxx（只改查询参数，落地的还是 /life/index.html）。
+      所以这里只有 /life 一个文件，不需要为每条记录生成页面。
     */
-    ...moments.map((moment) => ({ path: `/life/${moment.id}`, priority: 0.6, changefreq: 'monthly' })),
     /*
       本地文档的阅读页：id 在 query 里，所以只需要一个 /local 的真实文件。
       没有它，/local?id=xxx 会落到 404.html，状态码 404、标题「页面不存在」，

@@ -116,6 +116,7 @@ ReactBits 的效果是**素材**，不是风格。如果每个区块都挂一个
 | `⌘K` 命令面板 | `Dialog` + `backdrop-blur` + 60ms stagger | 检索本身就是功能展示 | 全键盘可达，Esc 关闭，结果即时过滤 |
 | 路由切换 | `View Transitions` | 导航反馈：让"换了一页"这件事有物理感 | 旧页 120ms 退、新页 220ms 进（不是 400ms —— 切页要利落）。chunk 未预热时**跳过过渡**而不是截到 Suspense 白屏；`prefers-reduced-motion` 下完全不启动 |
 | `/craft` | `Dock` / `ScrollExpand` / `GradientWaves` | 展品 | 默认**静帧**，hover / focus / 点击后才跑；每格标注"用了什么、为什么" |
+| `/craft` 页尾 | `ScrollBackdrop` | 展品：「背景接力」到底是怎么做的 | 吸顶舞台 + 三条背景按同一进度交叉淡入。**上层淡入、下层保持满不透明** —— 两层各占一块三角波会双重衰减，越滚越暗；斜切只在过渡区间写 `clip-path`，静止帧置 `none`；逐帧只碰 `opacity` / `transform`；`prefers-reduced-motion` 停第一帧，轨道高度不变（版面不跳） |
 | `/craft` 交互展位 | `TiltCard` / `MagneticButton` / `GlowBorder` | 展品 | 前两个指针驱动、hover 才动；`GlowBorder` 是常驻的，但只在展位里跑。三者都不得出现在列表页或阅读页 |
 | `/me` 首屏 | `LanyardBadge` | 身份：工牌是可抓的，不是一行"你好，我是…" | 物理在 `lanyardPhysics.ts`（可脱离 DOM 逐帧跑，`scripts/lanyard-feel.ts` 出数字）：牵引式拖拽、松手会甩、摆角是欠阻尼弹簧，**静止即停帧**；`md` 以下不挂载（首屏没位置，会被常驻 Dock 切半）；`prefers-reduced-motion` 下不启动循环；有照片时是**双面卡**——正面整幅照片、背面才是信息，点一下翻面（位移过 6px 算拖拽，不判时长），翻面放在卡里另一层 `.lanyard__flip`，因为卡的 `transform` 每帧被物理重写；照片 560×868 webp（62KB）、`loading=lazy`，窄屏卡不挂载也就不会下载 |
 | `/me` 收尾 | `DecayCard`（reactbits 原版） | 告别：一张会散开的图，比再加一行链接有分量 | 参数全是官方默认值：`intensity .5 / sensitivity .5 / recovery .6 / idle .35 / travel 50 / tilt 10 / scope window`。画布比卡面大 12.4% 给撕裂留余量，照片再内缩 8.33%；simplex 叠成湍流按指针速度推开采样坐标，边缘先烂、主体还认得出来。`scope=window` 意味着鼠标在页面任何地方动都能撕；停下 0.6s 合回，没人碰时边缘也一直轻轻起毛。卡会跟着指针漂 ~64px、转 ±10°，右侧留 5rem 余量，1024 下不被切；`prefers-reduced-motion` 下不漂不转（原版行为）；`lg` 以下不挂载（触屏没有「指针速度」这个输入）；图换成了站点主人的一张傍晚火烧云（600×800 webp，61KB）：橙金与靛蓝交错的鱼鳞天，底部一排树梢与吊臂剪影 —— 亮部多、层次密，撕开时错位最看得见 |
@@ -188,7 +189,7 @@ title: 从 13 个类型错误里读出的结构问题
 slug: reactbits-audit
 date: 2026-10-27
 updated: 2026-10-27
-topic: engineering          # engineering | design | tooling
+topic: structure            # structure | styling | content | reading | motion | delivery
 tags: [typescript, tailwind, refactor]
 status: evergreen           # seedling | growing | evergreen
 readingTime: 8
@@ -208,7 +209,7 @@ summary: Tailwind 从未安装、白屏的三个根因，以及为什么"假组�
 
 **改造（受 §4 预算表约束）**：`DecryptedText`（Hero 单个关键词）、`SoftAurora`（Hero 背景，懒挂载）、`Dock`（`/craft` 页尾展品）、`GradientWaves`（`/craft` 展位 + 404 背景）、`ScrollExpand`（`/craft` 展位，默认静帧）
 
-**新增效果层**：`Reveal`（IO 入场，唯一被允许出现在列表页的动效）、`AuroraBackdrop`（SoftAurora 的懒加载包装，负责 reduced-motion 与 idle 调度）
+**新增效果层**：`Reveal`（IO 入场，唯一被允许出现在列表页的动效）、`AuroraBackdrop`（SoftAurora 的懒加载包装，负责 reduced-motion 与 idle 调度）、`ScrollBackdrop`（`/craft` 页尾的滚动背景序列）
 
 ## 8. 现有资产迁移映射
 
@@ -427,7 +428,7 @@ JS/CSS 资源 200；`rss.xml` / `sitemap.xml` 里的绝对地址都带子路径�
 | 层 | 变量 | 出现位置 | 纪律 |
 | --- | --- | --- | --- |
 | 身份/动作 | `--brand` → `--brand-2` | 主按钮、logo、导航当前项下划线、页脚与区块分隔线 | 渐变只在这几处，不铺到正文 |
-| 内容分类 | `--topic-engineering/design/tooling` | 主题筛选点、行尾主题名、复盘卡角标 | **只做标签级**，不做大面积色块 |
+| 建造分层 | `--topic-structure/styling/content/reading/motion/delivery` | 主题筛选点、行尾主题名、复盘卡角标 | **只做标签级**，不做大面积色块 |
 | 状态语义 | `--decision` / `--warn` / `--evergreen` | 成熟度圆点、错误提示 | 语义固定，不许换色 |
 | 环境 | `.page-wash` | 每页顶部 | 越往下越淡，正文区必须回到中性 |
 
@@ -1445,4 +1446,125 @@ button 补这一条（v3 是补的），全站按钮悬停都是箭头，读起�
 六组页面/主题/视口组合（首页深浅色各 1440、390，`/me/` 1440 与 390，`/craft/` 1440）
 **零运行时异常**，横向溢出全部 0。另外抽查 `/notes/`（深浅两色）、`/notes/reactbits-audit/`
 （1440 与 390）、`/about/`、`/life/`，溢出 0、异常 0。
+
+
+## 30. 生活记录改为上传：数据从代码里搬进浏览器（2026-11-05）
+
+> 前一版（§25–27）把六条记录写死在 `lib/moments.ts` 里，配六张实拍。这一版把它们全部删掉：
+> 记录改由站主在页面上传，存进**访客自己浏览器**的 IndexedDB。
+> 这不是「加一个上传按钮」，是把这一页的数据归属换了个主体。
+
+### 30.1 删掉了什么
+
+六条记录、四张图（`bridge-n` / `collab` / `dusk` / `rain-win`）、以及 `lib/moments.ts` 整个文件。
+云和荷塘两张留下 —— `/craft` 的滚动背景正用着，已从 `assets/moments/` 移到 `assets/` 根，
+目录随之消失。`/life/:id` 的六条预渲染页面一并消失，站点从 32 页回到 26 页。
+
+### 30.2 为什么只存本机
+
+三条路：IndexedDB / 自建 Worker + R2 / 第三方 CMS。选了第一条，因为这一页的量级撑不起后端：
+照片是低频内容，一年可能就几十条，为了它开 R2、写上传接口、做对象回收、再给图片做鉴权，
+成本远大于收益。代价必须写在界面上：**别人打开这一页是空的，换设备也看不到自己的记录。**
+说不清这件事的「本地存储」就是骗人，所以空态、工具栏、页脚三处都写了一句。
+
+### 30.3 一个库，两个 store
+
+`localDocs.ts` 原先自己 `indexedDB.open('exoself', 1)`。如果生活记录再各开各的版本号，
+迟早撞上 VersionError：**同一个库用低版本打开会直接抛错，而且没有恢复手段**，用户只能清站点数据。
+所以抽出 `lib/idb.ts`：版本 2、两个 store、连接只建一次。有个连带影响 —— 原先每个事务
+结束都 `db.close()`，改成共享连接后必须去掉，否则下一次复用拿到的是已关闭的库。
+
+升级只增不删，`onupgradeneeded` 里用 `contains` 兜底，已导入的文档原样保留。
+
+### 30.4 地址从 `/life/:id` 变成 `/life?id=`
+
+静态托管下 `/life/:id` 没有对应文件，只能先落到 404.html 再由前端纠正 —— 刷新会闪一下 404。
+`/local` 当初就是为了这个改成查询参数的（见 §27 后的修订），这里沿用同一个判断。
+记录本来就不可分享，分层路径换不来任何东西。
+
+顺带把路由收成 `LifeRoute` 一个入口。不能图省事让 `Life` 自己判断 `?id=`：
+列表态与详情态的 hooks 数量不同，同一个组件实例在两者间切换，React 会直接报错。
+
+### 30.5 照片先压到 1600
+
+手机原图 8–12MB，直接入库有两个后果：Safari 的配额很快见底；列表每帧要解码一张 4000px 的图。
+压到最长边 1600、WebP q0.82，详情页容器上限 900，仍有 1.7 倍余量。
+
+压缩放在前端做还有一个好处：将来接 R2 时，传上去的**已经是成品**，
+后端不需要再引入一套图片处理，两边不会各压一次。
+
+### 30.6 接口怎么留
+
+`LifeSource` 三个方法（list / add / remove），`lifeSource` 一行出口，页面只认接口。
+云端契约写在 `lifeStore.ts` 顶部注释里：`GET/POST/DELETE /api/life`、`Bearer` 令牌、
+Worker 比对 GitHub 登录名是否等于 OWNER、照片进 R2 且 D1 只存元信息。
+接的时候换掉那一行，页面代码一行不动。
+
+现在就写一个连不上的远程实现只会变成死代码，所以只定契约、不写实现。
+
+### 30.7 顺手修掉一个假通过
+
+`npm run smoke` 里 `note.mdx` 直接挂：MDX 中以 `/` 开头的链接会被 `MDXLink` 换成 `<Link>`，
+裸渲染时没有 Router 上下文，抛 `basename of useContext(...) is null`。
+这是上一轮加站内互链时就埋下的，只是那之后只跑了 `build` 没跑 `smoke` —— 能构建不代表能渲染。
+补一层 `MemoryRouter` 后恢复 `ALL RENDER`。
+
+### 30.8 验证
+
+`tsc` 0 错、`eslint` 0 错、预渲染 26 页 + 404、sitemap 与 rss 各 16 条、smoke 全绿。
+截图核对空态、表单展开态与移动端；IndexedDB 从 v1 升到 v2 后，已导入文档仍在。
+
+
+## 31. 六条示例回来：播种，而不是写死（2026-11-05 下午）
+
+> §30 把六条记录删干净之后，这一页对第一次打开的人是空的。空态写得再诚恳，
+> 也解释不了 ChromaGrid 为什么是灰的、为什么要三列、点开为什么会从卡片长成一张大图 ——
+> 那些判断全都没有对象可演。所以把六条放回 `lifeSeed.ts`，但**不是**放回渲染路径。
+
+### 31.1 三条路，选第三条
+
+1. **渲染时拼静态数组**：`[...seeds, ...entries]`。最省事，但立刻出现两套规则 ——
+   示例删不掉，自己的能删；编号、上一条/下一条、`?id=` 找不到时的 404 也都要分叉。
+2. **种子数组 + 墓碑表**：删示例时记一笔隐藏，下次拼进去时过滤。规则统一了，
+   但库里多出一类「不是记录的东西」，`getAll()` 之后到处都要过滤，而且得再升一次库版本。
+3. **播种进库**：首次打开时 fetch 图片、连同文字一次性 `put` 进 `moments`。
+   此后示例与用户记录在数据层完全同构 —— 同一套卡片、同一套排序、同一套删除。
+
+选了 3。它唯一的新问题是「删光之后刷新会不会又长出来」，那就必须有一个一次性的标记：
+`localStorage['life:seeded']`。只看「库是否为空」不行 —— 用户把六条全删掉，库就空了，
+下次刷新会替他撤销这次删除。标记只写一次，删干净就真的干净了。
+
+隐私模式下 `localStorage` 会抛，这时退化成只看库是否为空：最坏是删光后重播一次，
+比整页读不出记录要轻。播种失败也不缓存（`seeding = null`），否则一次偶发失败会让整个会话都没有示例。
+
+### 31.2 并发与失败
+
+列表页一次 `list()`，StrictMode 再跑一次 `useEffect` —— 两个请求撞在一起会装出十二张卡片。
+所以 `seedIfEmpty` 缓存同一个 promise，谁先到谁装，后到的等同一个结果。
+
+六张图 `fetch` 失败（断网、资源被拦）不阻断：照片留空，那条记录照样落库，
+前端退回 `momentPlaceholder` 的虚焦光斑。**文字比照片重要** —— 缺图是降级，缺记录是丢数据。
+
+### 31.3 照抄旧数据会踩到的两处
+
+- 旧 `moments.ts` 里有 `var(--topic-tooling)` 和 `var(--topic-design)`。六层分类重构后
+  这两个变量已经不存在了（现在是 `delivery` / `styling`），照抄会得到无效值 → 颜色静默继承父级。
+  `tone` 是 inline style，写错了不会报错，只会看起来"这块没上色"。
+- 图统一 900×600，宽高直接写成常量，不在播种时再 `createImageBitmap` 量一遍；
+  但**只有照片真的进了库才写** `photoWidth/Height`，否则详情页会为一团空气预留 900×600 的高度。
+
+`cloud.webp` / `lotus.webp` 现在在 `assets/` 根（`/craft` 滚动背景用着），示例直接引用同一份文件，
+Vite 只产出一份带 hash 的资源，不会为了示例再拷一遍。
+
+### 31.4 文案要跟着改
+
+原来那句「别人打开这一页是空的」现在只对了一半。页脚改成：前六条随站点打包、谁打开都看得到、也能删；
+你之后添加的才只存在这台设备的浏览器里，不上传、不同步。这个区分不能省 ——
+否则访客会以为「站主发的照片我也能看到」或者「我发的站主能看到」，两头都是错的。
+
+### 31.5 验证
+
+CDP 驱动真实 Edge，干净 profile：首次进 `/life` 六张卡片、六张图 `src` 全是 `blob:`（54–114KB，
+`naturalWidth` 900）、`localStorage` 标记已写；刷新仍六条（没重复播种）；进详情删一条 → 五条，
+刷新还是五条（没复活）；表单能展开、压缩提示在位。桌面 1440 与移动 390 截图核对无溢出。
 

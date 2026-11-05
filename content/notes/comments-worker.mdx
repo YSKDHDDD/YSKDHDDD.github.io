@@ -1,0 +1,86 @@
+---
+title: 静态站要留言，只能自己起一个后端
+date: 2026-11-02
+updated: 2026-11-02
+topic: delivery
+tags: [cloudflare, d1, backend]
+status: growing
+summary: GitHub Pages 没有服务端。评论区最终落在一个 Worker + 一张 D1 表上：一个配置接口、三个业务接口、三态软删、两层限流。
+---
+
+主站托管在 GitHub Pages，纯静态，没有任何能执行代码的地方。留言是唯一需要写操作的功能，所以它必须落到别处。
+
+## 为什么不用 giscus
+
+现成方案里 giscus 最省事：接 GitHub Discussions，零后端、零成本。放弃它有三个理由：
+
+| 问题 | 具体表现 |
+| --- | --- |
+| 数据不在自己手里 | 留言存在别人仓库的 Discussion 里，导出要绕一圈 |
+| 样式不可控 | iframe 里是另一套 DOM，站内的字体、行高、深色模式都带不进去 |
+| 门槛 | 发言必须登录 GitHub，对"路过说一句"的人来说太高 |
+
+第三点最致命。留言板的转化率本来就低，再加一次 OAuth 跳转，等于把大部分想说话的人挡在门外。
+
+## 一张表，三个分区键
+
+```sql
+CREATE TABLE comments (
+  id, scope, thread, parent_id,
+  author_id, author_name, author_url, provider, body,
+  status,          -- ok / deleted / hidden
+  ip_hash,         -- 只存加盐哈希
+  created_at, updated_at
+);
+```
+
+`scope + thread` 是分区键：文章留言用 `('post', '<slug>')`，独立留言板用 `('guest', 'guest')`。两种留言天然隔离，列表查询永远只扫一个分区，不需要额外的 `WHERE` 过滤。
+
+`parent_id` 留着但没用——楼中楼先不做。字段在，以后要开回复只改查询，不用迁移数据。
+
+<Callout type="decision" title="删除是换状态，不是 DELETE">
+`deleted` 是作者自己删的，`hidden` 是我下架的，两者分开记，都能撤销。垃圾留言留着也是证据，而一行只有几十字节——物理删除省不下什么，却把"误删"变成不可逆。
+</Callout>
+
+## 匿名优先，登录可选
+
+每个浏览器第一次来，前端生成一个 UUID 存在 `localStorage`，之后放在 `X-Client-Id` 头里。服务端只拿它判断"这条是不是你写的"，不关联任何身份。
+
+GitHub 登录是**可选增强**：只有配置了 OAuth，`/api/config` 才返回 `auth: true`，前端这时才渲染登录按钮。没配就是没有按钮——不是灰着的按钮，不是点了报错的按钮。
+
+```text
+GET  /api/config            → { auth: boolean }
+GET  /api/comments?scope=&thread=&cursor=
+POST /api/comments          → 写一条
+POST /api/comments/:id/delete → 软删
+```
+
+## 两道限流，一次去重
+
+个人站的留言板不需要验证码，但必须有刹车：
+
+1. **一分钟两条**——正常对话够用，脚本刷不动；
+2. **一天二十条**——防持续低频刷屏；
+3. **120 秒内同人同文**——多半是双击或网络重试，返回 409 而不是存两条。
+
+计数按 `ip_hash` 算，**包含已下架的行**。否则"发一条、删一条"就能无限刷——删只是改状态，行还在。
+
+IP 本身不落库，只存 `sha256(ip + IP_SALT)`。盐没配时退回 `AUTH_SECRET`，两个都没有才是不加盐——这一点在 `worker/README.md` 里写明了，因为"以为加了盐其实没加"比不加更危险。
+
+<Callout type="warn" title="没配地址时不要挂载组件">
+前端只在 `VITE_COMMENTS_API` 非空时渲染评论区。地址没配的表现应该是"什么都没有"，而不是"一个永远转圈的空框"——后者会让读者以为站坏了。
+</Callout>
+
+## 成本与边界
+
+Workers 每天 10 万次请求、D1 5GB 存储、每天 500 万行读，对个人站是过剩的。真正的边界不在额度，在**维护面**：
+
+- 多了一个部署单元（`worker/` 有自己的 `package.json` 和 `wrangler.toml`）；
+- 多了一套要同步的表结构（`schema.sql`）；
+- 多了一个需要轮换的密钥（`ADMIN_TOKEN`、`IP_SALT`）。
+
+这些成本换来的是一条明确的取舍：**留言数据在自己手里，读者不需要账号就能说话**。
+
+<Callout type="unverified" title="待验证">
+限流按 IP 算，遇到 NAT 后面的读者会误伤（一栋楼共用一个出口 IP）。个人站量级下还没撞上，但"两个人同一天在同一个公司网络里留言超过 20 条"是可能发生的。
+</Callout>

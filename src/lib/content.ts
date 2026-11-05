@@ -10,13 +10,24 @@ export { noteContent, retroContent } from '@/lib/bodies'
 /** 成熟度是这套外脑的灵魂字段：它让"长期维护"这件事变得可见 */
 export type NoteStatus = 'seedling' | 'growing' | 'evergreen'
 /**
- * 内容主题。
+ * 内容主题 = 这个站的建设分层，不是学科分类。
+ *
+ * 顺序即施工顺序：结构 → 样式 → 内容 → 阅读 → 动效 → 交付。
+ * 一篇笔记只回答"我在哪一层遇到了什么问题"，跨层的问题拆成两篇，
+ * 这样列表侧的筛选读起来像一条流水线，而不是一堆标签。
  *
  * `misc` 只给本地导入的文档兜底用：大多数 markdown 没有 frontmatter，
- * 硬把它塞进「工程」会让那三个分类的计数失真。它不承诺"站内会有这个分类"——
+ * 硬把它塞进某一层会让那六层的计数失真。它不承诺"站内会有这个分类"——
  * 主题 chips 与「N 个主题」都从数据现算，没有本地文档时它根本不会出现。
  */
-export type TopicId = 'engineering' | 'design' | 'tooling' | 'misc'
+export type TopicId =
+  | 'structure'
+  | 'styling'
+  | 'content'
+  | 'reading'
+  | 'motion'
+  | 'delivery'
+  | 'misc'
 
 export interface TocItem {
   depth: number
@@ -109,11 +120,30 @@ export function getRelatedEntries(
 }
 
 export const topicLabels: Record<TopicId, string> = {
-  engineering: '工程',
-  design: '设计',
-  tooling: '工具链',
+  structure: '结构',
+  styling: '样式',
+  content: '内容',
+  reading: '阅读',
+  motion: '动效',
+  delivery: '交付',
   misc: '未分类',
 }
+
+/**
+ * 主题的展示顺序 = 施工顺序。
+ *
+ * 列表页的筛选不该按"最近更新"排：那样侧栏会随发文时间重排，
+ * 而这套分类的意义恰恰是固定的先后。`misc` 永远垫底。
+ */
+export const topicOrder: TopicId[] = [
+  'structure',
+  'styling',
+  'content',
+  'reading',
+  'motion',
+  'delivery',
+  'misc',
+]
 
 export const statusLabels: Record<NoteStatus, string> = {
   seedling: '萌芽',

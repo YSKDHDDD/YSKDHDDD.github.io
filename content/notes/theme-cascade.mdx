@@ -1,0 +1,112 @@
+---
+title: 主题切换不该经过 React
+date: 2026-11-02
+updated: 2026-11-02
+topic: styling
+tags: [theme, css-variables, hydration]
+status: evergreen
+summary: 首帧的主题必须由内联脚本在 React 之前定好。真相放在 <html data-theme> 上，React 只订阅它，不拥有它。
+---
+
+深色站切浅色，最容易犯的错不是配色，是**顺序**：等 React 挂载完再读 `localStorage`，用户会先看到一帧深色，然后闪成浅色。
+
+这一帧很短，但它发生在一个站最贵的位置——首屏。
+
+## 主题必须在 React 之前定
+
+`index.html` 里有一段同步脚本，就干一件事：
+
+```html
+<script>
+  ;(() => {
+    try {
+      const stored = localStorage.getItem('theme')
+      const system = window.matchMedia('(prefers-color-scheme: light)').matches
+        ? 'light'
+        : 'dark'
+      document.documentElement.dataset.theme =
+        stored === 'light' || stored === 'dark' ? stored : system
+    } catch {
+      /* localStorage 不可用时退回默认深色 */
+    }
+  })()
+</script>
+```
+
+它写在 `<head>` 里，阻塞渲染，所以在第一帧之前就已经把 `data-theme` 放好了。这也是唯一能根治闪烁的位置。
+
+## 于是不能再用 useState
+
+如果 React 里再存一份 `theme`，就有了两个真相：DOM 上的 `data-theme`，和 state 里的字符串。它们会分叉——尤其是在另一个标签页切换主题、或者用户在 DevTools 里手改属性的时候。
+
+所以 `src/lib/theme.ts` 把 DOM 当唯一真相源，React 只订阅：
+
+```ts
+function getSnapshot(): Theme {
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+}
+
+function getServerSnapshot(): Theme {
+  return 'dark'
+}
+
+export function useThemeState() {
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  // ...
+}
+```
+
+`getServerSnapshot` 返回固定的 `dark`，是这段代码里最关键的一行：预渲染输出的永远是深色版，浏览器 hydration 之后才切成用户偏好。如果没有它，服务端拿不到 `localStorage`，React 会报 mismatch，严重时整棵树重渲染。
+
+<Callout type="decision" title="为什么不用 class 属性">
+`class` 方案需要 `dark:` 前缀铺满全站，改一次色板要动所有组件。属性 + 变量方案只需要改一处定义，组件里永远是 `bg-surface`、`text-muted` 这类语义名。
+</Callout>
+
+## CSS 侧只做两级映射
+
+第一级是语义变量，两套主题各一份：
+
+```css
+:root {
+  --bg: #0b0f19;
+  --fg: #e6e8ee;
+}
+
+[data-theme='light'] {
+  --bg: #fcfcfd;
+  --fg: #16181d;
+}
+```
+
+第二级把它们映射成工具类，关键是 `inline`：
+
+```css
+@theme inline {
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+}
+```
+
+`inline` 的含义是"把这个值原样写进工具类"。产物里可以直接验证：
+
+```css
+.bg-bg { background-color: var(--bg) }
+```
+
+如果工具类引用的是中间变量（`--color-bg`），切换主题就多了一跳；那一跳跟不跟着 `data-theme` 走，取决于它声明在哪个选择器上。`inline` 把这一跳去掉，让工具类直接落到会变的那个变量上。
+
+这类问题不会报错，只会表现为"有一部分颜色不跟着变"——所以判断标准不是配置写没写，而是去产物里搜一条工具类，看它最终引用的是谁。
+
+<Callout type="warn" title="新增颜色必须两套都补">
+令牌表是两份手工维护的清单。漏掉浅色那一份的表现是：深色下正常，切到浅色之后某个色块对比度掉到 2:1。这类问题截图时不一定看得出来，最好在加颜色时就地检查两处。
+</Callout>
+
+## 主题库解决的不是这个问题
+
+`next-themes` 这类库的核心机制和上面完全一样：内联脚本 + `data-*` 属性 + 订阅。它能省的是"记住偏好、跟随系统、多标签同步"这些边角，代价是一个运行时依赖和一层抽象。
+
+这个站的边角只有一条：`localStorage` 写入失败时静默忽略（隐私模式）。`try/catch` 三行就够了，不值得为它引一个包。
+
+<Callout type="unverified" title="待验证">
+系统偏好只在首次访问、且本地没有记录时读一次。之后用户改了系统设置，页面不会跟着变——因为没监听 `matchMedia('(prefers-color-scheme)').change`。加监听不难，但它会和"用户手动选过"的状态打架，优先级规则我还没想清楚。
+</Callout>

@@ -332,7 +332,7 @@ export default function ImportPage() {
 {`---
 title: 我的一篇笔记
 date: 2026-10-29
-topic: design      # engineering | design | tooling
+topic: reading     # structure | styling | content | reading | motion | delivery
 tags: [阅读, 设计]
 status: growing    # seedling | growing | evergreen
 ---`}

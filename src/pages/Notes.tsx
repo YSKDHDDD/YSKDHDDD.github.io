@@ -7,7 +7,7 @@ import { PageWash } from '@/components/common/PageWash'
 import { StatusDot } from '@/components/common/StatusDot'
 import { TagChip } from '@/components/common/TagChip'
 import { useEntryRows } from '@/hooks/useEntryRows'
-import { notes, statusHints, statusLabels, tagIndex, topicLabels } from '@/lib/content'
+import { notes, statusHints, statusLabels, tagIndex, topicLabels, topicOrder } from '@/lib/content'
 import { topicTone } from '@/lib/tone'
 import type { NoteStatus, TopicId } from '@/lib/content'
 import { cn } from '@/lib/utils'
@@ -80,7 +80,10 @@ export default function Notes() {
   const topics = useMemo(() => {
     const counts = new Map<TopicId, number>()
     for (const row of rows) counts.set(row.meta.topic, (counts.get(row.meta.topic) ?? 0) + 1)
-    return [...counts.entries()]
+    // 按固定的施工顺序输出，不跟着发文时间重排；没有笔记的层不出现
+    return topicOrder
+      .filter((id) => counts.has(id))
+      .map((id) => [id, counts.get(id) as number] as [TopicId, number])
   }, [rows])
 
   const filtered = useMemo(
@@ -134,7 +137,8 @@ export default function Notes() {
       <header className="mt-4 max-w-[68ch]">
         <h1 className="text-h1 font-medium tracking-[-0.02em] text-fg">笔记库</h1>
         <p className="mt-3 text-body text-muted">
-          共 {rows.length} 篇 · {topics.length} 个主题 · 最近 {latestDays} 天内有更新。
+          共 {rows.length} 篇 · {topics.length} 个主题 ·{' '}
+          {latestDays === 0 ? '今天有更新' : `最近 ${latestDays} 天内有更新`}。
           成熟度不是进度条，是我对结论确定程度的诚实标注。
         </p>
       </header>

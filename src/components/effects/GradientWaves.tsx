@@ -64,7 +64,7 @@ export default function GradientWaves({
         style.getPropertyValue(name).trim() || fallback;
       palette = [
         pick('--brand', '#7b6cff'),
-        pick('--topic-design', '#f472b6'),
+        pick('--topic-styling', '#f472b6'),
         pick('--brand-2', '#3ea6ff'),
       ];
       isLight = root.dataset.theme === 'light';

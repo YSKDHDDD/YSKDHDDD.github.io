@@ -1,4 +1,5 @@
 import type { NoteStatus, TopicId } from './content'
+import { DOCS_STORE, hasIndexedDb, tx } from './idb'
 
 /**
  * 本地文档：用户自己拖进来的 markdown。
@@ -31,48 +32,24 @@ export interface LocalDoc {
   importedAt: number
 }
 
-const DB_NAME = 'exoself'
-const DB_VERSION = 1
-const STORE = 'docs'
-
-const TOPICS: TopicId[] = ['engineering', 'design', 'tooling', 'misc']
+/**
+ * 导入文档只认这七个值；白名单和 content.ts 的联合类型必须同时改
+ */
+const TOPICS: TopicId[] = [
+  'structure',
+  'styling',
+  'content',
+  'reading',
+  'motion',
+  'delivery',
+  'misc',
+]
 const STATUSES: NoteStatus[] = ['seedling', 'growing', 'evergreen']
-
-function hasIndexedDb(): boolean {
-  return typeof indexedDB !== 'undefined'
-}
-
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: 'id' })
-      }
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
-}
-
-function tx<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  return openDb().then(
-    (db) =>
-      new Promise<T>((resolve, reject) => {
-        const transaction = db.transaction(STORE, mode)
-        const request = run(transaction.objectStore(STORE))
-        request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error)
-        transaction.oncomplete = () => db.close()
-      }),
-  )
-}
 
 export async function listLocalDocs(): Promise<LocalDoc[]> {
   if (!hasIndexedDb()) return []
   try {
-    const docs = await tx<LocalDoc[]>('readonly', (store) => store.getAll())
+    const docs = await tx<LocalDoc[]>(DOCS_STORE, 'readonly', (store) => store.getAll())
     return docs.sort((a, b) => b.importedAt - a.importedAt)
   } catch {
     // 隐私模式或存储被禁用：当作"没有本地文档"，不要让整个页面挂掉
@@ -82,7 +59,7 @@ export async function listLocalDocs(): Promise<LocalDoc[]> {
 
 export async function putLocalDoc(doc: LocalDoc): Promise<void> {
   if (!hasIndexedDb()) throw new Error('这个浏览器不支持本地存储')
-  await tx('readwrite', (store) => store.put(doc))
+  await tx(DOCS_STORE, 'readwrite', (store) => store.put(doc))
 }
 
 /**
@@ -96,17 +73,17 @@ export async function updateLocalDocMeta(
   patch: Partial<Pick<LocalDoc, 'topic' | 'tags' | 'status'>>,
 ): Promise<LocalDoc | null> {
   if (!hasIndexedDb()) return null
-  const current = await tx<LocalDoc | undefined>('readonly', (store) => store.get(id))
+  const current = await tx<LocalDoc | undefined>(DOCS_STORE, 'readonly', (store) => store.get(id))
   if (!current) return null
   const next: LocalDoc = { ...current, ...patch }
   // readwrite 事务不能跨 await 复用，所以重新开一次
-  await tx('readwrite', (store) => store.put(next))
+  await tx(DOCS_STORE, 'readwrite', (store) => store.put(next))
   return next
 }
 
 export async function deleteLocalDoc(id: string): Promise<void> {
   if (!hasIndexedDb()) return
-  await tx('readwrite', (store) => store.delete(id))
+  await tx(DOCS_STORE, 'readwrite', (store) => store.delete(id))
 }
 
 /** 同一篇文章重复导入时覆盖旧的，避免列表里堆出两份一模一样的 */
