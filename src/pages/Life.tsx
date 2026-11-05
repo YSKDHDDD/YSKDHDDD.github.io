@@ -17,7 +17,7 @@ import { useTheme } from '@/lib/theme'
  * 底片，指针扫过才显影，正好对上"记下来，是为了之后还想得起来"。
  *
  * 记录由站主自己上传，**只存进这台设备的 IndexedDB**。前六条是随站点打包的示例，
- * 第一次打开时写进本机库（见 `lifeStore` 的 `seedIfEmpty`），此后的新增只有本机看得见。
+ * 第一次打开时写进本机库（见 `lifeStore` 的 `ensureSeeded`），此后的新增只有本机看得见。
  * 这个区别必须说清楚 —— 否则会以为「别人也能看到我发的」或者「换个浏览器数据丢了」。
  */
 export default function Life() {

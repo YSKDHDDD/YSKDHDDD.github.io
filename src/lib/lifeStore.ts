@@ -9,7 +9,7 @@ import { lifeSeeds } from './lifeSeed'
  * 是最难让人相信的一种隐私承诺。
  *
  * 唯一的例外是六条**示例记录**（`lifeSeed.ts`）：它们随站点打包，第一次打开时
- * 由 `seedIfEmpty` 写进同一个 store。写完之后就和用户自己加的一样 —— 能点开、能删，
+ * 由 `ensureSeeded` 写进同一个 store。写完之后就和用户自己加的一样 —— 能点开、能删，
  * 删了不会再长出来。所以界面上要分清两件事：示例谁都看得见，你加的只有你看得见。
  *
  * 之所以还要抽一层 `LifeSource`，是因为以后要接云端：只换下面 `lifeSource` 那一行，
@@ -166,7 +166,11 @@ function hasSeeded(): boolean {
   try {
     return localStorage.getItem(SEED_FLAG) !== null
   } catch {
-    // 隐私模式下 localStorage 会抛；退化成只看「库是否为空」，最坏是删光后重播一次
+    /*
+     * 隐私模式下 localStorage 会抛。这时没有别的一次性存储可用（IndexedDB 里再开一个
+     * store 要升版本，为一句标记不值得），退化成每次进页面都补一遍缺 ——
+     * 也就是删掉的示例会被补回来。这是隐私模式下的已知代价，写在注释里而不是假装没有。
+     */
     return false
   }
 }
@@ -181,13 +185,17 @@ function markSeeded(): void {
 
 async function seedOnce(): Promise<void> {
   if (!hasSeeded()) {
+    /*
+     * 按 id 补缺，而不是「库非空就整批跳过」：站主可能先传了几条自己的记录，
+     * 示例照样该补齐。反过来说，播种标记一旦写下，这里就再不会进来 ——
+     * 之后手动删掉的示例不会被这条逻辑捞回来。
+     */
     const existing = await tx<LifeEntry[]>(LIFE_STORE, 'readonly', (store) => store.getAll())
-    if (existing.length) {
-      markSeeded()
-      return
-    }
+    const present = new Set(existing.map((entry) => entry.id))
 
     for (const seed of lifeSeeds) {
+      if (present.has(seed.id)) continue
+
       let photo: Blob | undefined
       try {
         const response = await fetch(seed.src)
@@ -221,7 +229,7 @@ async function seedOnce(): Promise<void> {
 /** 并发的 list 共用一个播种过程：列表页和它自己的一次重渲染不该装两遍 */
 let seeding: Promise<void> | null = null
 
-function seedIfEmpty(): Promise<void> {
+function ensureSeeded(): Promise<void> {
   if (!seeding) {
     seeding = seedOnce()
     // 失败不缓存，否则整个会话都读不到示例；下一次进页面再试
@@ -241,7 +249,7 @@ export const localLifeSource: LifeSource = {
     if (!hasIndexedDb()) return []
     try {
       // 装示例失败不该连累「读已有记录」，所以单独兜一层
-      await seedIfEmpty().catch(() => {})
+      await ensureSeeded().catch(() => {})
       return sortEntries(await tx<LifeEntry[]>(LIFE_STORE, 'readonly', (store) => store.getAll()))
     } catch {
       // 隐私模式或存储被禁用：当作「还没有记录」，不要让整页挂掉
