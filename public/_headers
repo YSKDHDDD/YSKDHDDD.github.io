@@ -1,3 +1,13 @@
+# GitHub Pages 不认这个文件：它只支持 200/404 两种响应，没有自定义头的入口。
+# 所以下面这一段现在**不生效**，留着是为了换托管（Cloudflare Pages / Netlify）时立刻可用。
+# CSP 不写在这里 —— 它已经写在 index.html 的 meta 上（构建时由 vite.config.ts 注入），
+# 两处都写会取交集，一处改错就整站白屏，留一份更不容易写歪。
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
+
 # 带内容哈希的资源可以永久缓存：文件名变了 URL 就变了，不存在脏缓存
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

@@ -34,3 +34,17 @@ CREATE INDEX IF NOT EXISTS idx_comments_ip
 -- 「我留下的」
 CREATE INDEX IF NOT EXISTS idx_comments_author
   ON comments (author_id, created_at DESC);
+
+-- 管理口令的失败记录。
+--
+-- 为什么不放在内存里：Worker 的 isolate 随时会被回收，计数留在进程里等于没有。
+-- 只存加盐后的 ip_hash，与留言共用同一个盐；成功登录一次就把这个 IP 的记录清掉，
+-- 每次写入顺手删掉过窗的行，所以表里只会有最近十分钟的失败。
+CREATE TABLE IF NOT EXISTS admin_failures (
+  ip_hash TEXT NOT NULL,
+  at      INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_failures_ip
+  ON admin_failures (ip_hash, at DESC);
+

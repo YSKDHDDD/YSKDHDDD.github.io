@@ -186,3 +186,79 @@ npx wrangler d1 execute site-comments --remote \
 没有接 Turnstile：`challenges.cloudflare.com` 在国内经常连不上，配了它而脚本加载不出来，
 整个留言区就废了。真要加，在 `createComment` 里补一段 `siteverify` 请求，
 前端在 `CommentForm` 里挂一个 widget 就行。
+
+## 安全管理
+
+### 口令与密钥
+
+| 名称 | 怎么配 | 作用 | 泄漏/轮换的后果 |
+| --- | --- | --- | --- |
+| `ADMIN_TOKEN` | `wrangler secret put` | 管理接口（列下架 / 恢复）的口令 | 换新的即可，旧值下一次请求就失效 |
+| `AUTH_SECRET` | `wrangler secret put` | 签发登录令牌 + 给 IP 哈希加盐 | 换掉之后所有人被登出（签名不再匹配），这是预期行为 |
+| `IP_SALT` | `wrangler secret put` | 只给 IP 哈希加盐 | 换掉之后历史 `ip_hash` 与新记录对不上，限流从零开始计 |
+| `GITHUB_CLIENT_SECRET` | `wrangler secret put` | 换 GitHub access token | 去 GitHub 后台重置，同时更新这里 |
+
+用 `wrangler secret` 而不是 `[vars]`：`vars` 会写进 `wrangler.toml`，跟着仓库走，等于公开。
+
+### 管理口令的爆破闸
+
+十分钟内错五次，这个 IP 的 `/api/admin/*` 全部 429 —— 此时即使口令对了也不放行，
+不给「试对了」任何信号。成功一次就把记录清空。
+
+计数落在 D1 的 `admin_failures` 表，不放在内存里：Worker 的 isolate 随时会被回收，
+进程内计数等于没有。表里只保留最近十分钟的行，每次写失败顺手清一次过窗的。
+
+没带 `Authorization` 的请求只回 401、不计数 —— 否则任何陌生人点一下这个地址，
+就能把站主自己的 IP 关十分钟。
+
+自己把自己锁了（比如脚本里口令写错跑了五次）：
+
+```bash
+npx wrangler d1 execute site-comments --remote --command "DELETE FROM admin_failures"
+```
+
+等十分钟也行，过窗的行会被下一次失败顺手清掉。
+
+### 请求体上限
+
+`MAX_JSON_BYTES = 16KB`。正文上限 1200 字，中文按三字节算 3.6KB，这个额度很宽。
+先看 `Content-Length` 挡掉明显超标的，读完再量一次实际长度 —— 头部是客户端说的，
+可以撒谎，也可以干脆没有（chunked）。
+
+### 响应头
+
+每个响应（包括 204 预检和登录回调的纯文本错误页）都带：
+
+```
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
+X-Frame-Options: DENY
+Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+Strict-Transport-Security: max-age=31536000
+```
+
+### 备份与恢复
+
+D1 自带 Time Travel，30 天内可以回到任意时间点（这是首选，不用自己排计划）：
+
+```bash
+npx wrangler d1 time-travel info site-comments
+npx wrangler d1 time-travel restore site-comments --timestamp=2026-11-05T10:00:00Z
+```
+
+逻辑导出用于离线留档或换账号迁移：
+
+```bash
+npx wrangler d1 export site-comments --remote --output backup-$(date +%F).sql
+```
+
+建议在「改表结构」和「批量清理」前后各导一次 —— 个人站这个量级，不需要更密的排期。
+导出的 sql 里有 `ip_hash`，虽然加了盐，仍然按敏感文件对待，别往仓库里提交。
+
+### 没做的，以及为什么
+
+- **Turnstile**：`challenges.cloudflare.com` 在国内经常连不上，加载不出来整个留言区就废了。
+- **WAF / 自定义限流规则**：免费版能配的规则有限，留言量也撑不起额外一层。
+  真要更强，在 `createComment` 里加 `siteverify` 请求即可。
+- **点击劫持防护**：需要 `X-Frame-Options` 或 `frame-ancestors` 响应头，
+  主站是 GitHub Pages，不支持自定义头，只做了 meta 能表达的那部分（见根目录 README 的「安全」一节）。

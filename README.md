@@ -168,6 +168,39 @@ public/                    favicon / og.png / _headers / .nojekyll
 
 默认匿名可发（`X-Client-Id` 是 localStorage 里的 UUID，服务端只拿它判断"这条是不是你写的"）；GitHub 登录是可选项，运行时读 `/api/config` 决定入口是否渲染，前端不需要为此重新部署。部署步骤见 [`worker/README.md`](./worker/README.md)。
 
+## 安全
+
+静态站没有服务端，能做的比一般站点少，但也不少。分三层看：
+
+**搬到浏览器之前（构建期）**
+
+- **CSP**：`vite.config.ts` 的 `securityMeta` 插件把策略写进每个页面的 `<meta http-equiv>`。
+  `script-src 'self'`（内联脚本只有一段「首帧定主题」，已抽成 `public/theme-init.js`）、
+  `object-src 'none'`、`base-uri 'self'`、`form-action 'self'`、`connect-src` 只放本站 + 留言 API 的源。
+  `style-src` 必须带 `'unsafe-inline'`：React 的 `style={{}}` 和 Shiki 的行内高亮都是 style 属性。
+- **内容渲染**：站内 MDX 在构建期编译；用户导入的 markdown 走自写的 `lib/markdown.ts`，
+  链接先过 `safeUrl`（只放行 http/https/mailto）、再 `escapeHtml`；评论由 React 转义，
+  全站没有把第三方输入塞进 `dangerouslySetInnerHTML` 的地方。
+- **依赖**：`npm audit --omit=dev` 0 漏洞；构建不产 sourcemap。
+
+**运行期（Worker）**
+
+留言后端的三道闸（蜜罐 / 限流 / 去重）、管理口令的爆破闸（十分钟五次）、16KB 请求体上限、
+每个响应都带的安全头、以及 D1 的 Time Travel 备份 —— 见 [`worker/README.md`](./worker/README.md) 的「安全管理」。
+
+**做不到的，写清楚**
+
+GitHub Pages 不支持自定义响应头（`public/_headers` 在那边是死文件）。所以下面这几条只能缺着：
+
+| 缺什么 | 后果 | 什么时候能补 |
+| --- | --- | --- |
+| `frame-ancestors`（meta 里无效） | 页面可以被别的站用 iframe 套起来做点击劫持 | 挂 CDN / 换托管 / 上 Cloudflare Transform Rules |
+| `Strict-Transport-Security` | 首次访问仍可能走 http（Pages 会 301，实际影响很小） | 同上 |
+| `Permissions-Policy` | 无法从响应头关掉地理位置、摄像头等 API | 同上 |
+
+一条已知的取舍：GitHub 登录令牌存在 localStorage，有效期 30 天。XSS 一旦发生它就能被读走 ——
+这里的防线是 CSP 加「没有把用户输入拼进 HTML」，而不是把令牌挪进 httpOnly cookie（静态站没有服务端可签 cookie）。
+
 ## 效果预算
 
 ReactBits 的效果是素材，不是风格。四条红线（详见 `docs/DESIGN_PLAN.md` §4）：

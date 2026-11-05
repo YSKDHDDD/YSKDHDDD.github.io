@@ -72,6 +72,19 @@ const DAILY_MAX = 20
 const TOKEN_TTL = 30 * 86_400_000
 
 /**
+ * 请求体上限。
+ *
+ * 正文上限 1200 字符，中文按 UTF-8 三字节算也就 3.6KB，加上昵称和几个字段，
+ * 16KB 已经很宽。不设上限的话 `request.json()` 会先把整个包读进内存再被 `clean`
+ * 截断 —— 读之前那一瞬间是完整的，几 MB 的包白吃 CPU 和内存。
+ */
+const MAX_JSON_BYTES = 16_384
+
+/** 管理口令输错的观察窗与容忍次数：十分钟内错五次，这个 IP 就先停下 */
+const ADMIN_WINDOW = 600_000
+const ADMIN_MAX_FAILS = 5
+
+/**
  * status 的三个取值。'ok' 是唯一会被公开列表查到的值，
  * 另外两个都是「下架」：作者自己删的记 'deleted'，管理员下架的记 'hidden' ——
  * 分开记是为了以后能分辨"他自己后悔了"和"我给他撤了"。
@@ -92,13 +105,45 @@ const utf8 = new TextEncoder()
 
 /* ---------- 小工具 ---------- */
 
+/**
+ * 每个响应都带的安全头。
+ *
+ * API 只回 JSON，所以能收紧的都收紧：nosniff 让浏览器不要猜类型（一个被塞进
+ * text/html 的 JSON 不该被当页面执行）；referrer 不发，免得接口地址被带去第三方；
+ * frame-ancestors 不让任何页面把它嵌进 iframe。
+ *
+ * 注意 HSTS 对 API 没有实际作用（Worker 默认只在 HTTPS 下可达），但自定义域
+ * 接上来之后它是唯一能由后端补的一层，留着不占地方。
+ */
+const SECURITY_HEADERS: Record<string, string> = {
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+  'x-frame-options': 'DENY',
+  'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
+  'strict-transport-security': 'max-age=31536000',
+}
+
 function json(data: unknown, status: number, cors: Record<string, string>): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
+      ...SECURITY_HEADERS,
       'content-type': 'application/json; charset=utf-8',
+      // 留言是实时内容，缓存住会让人以为「刚发的没出现」
       'cache-control': 'no-store',
       ...cors,
+    },
+  })
+}
+
+/** 登录回调上那几个纯文本错误页。同样要带安全头：它们会被浏览器当文档渲染 */
+function plain(message: string, status: number): Response {
+  return new Response(message, {
+    status,
+    headers: {
+      ...SECURITY_HEADERS,
+      'content-type': 'text/plain; charset=utf-8',
+      'cache-control': 'no-store',
     },
   })
 }
@@ -171,6 +216,59 @@ function isAdmin(request: Request, env: Env): boolean {
 }
 
 /**
+ * 管理接口的爆破闸。
+ *
+ * ADMIN_TOKEN 是一个长期口令。定长比较只解决了「按响应时间逐位试」，不解决次数 ——
+ * 对着 /api/admin/comments 每秒猜一次，总能撞上。这里按 IP 记失败：十分钟内错五次
+ * 就锁住，成功一次就把记录清掉。
+ *
+ * 只挡 /api/admin/*，不挡 DELETE /api/comments/:id：那条路径上普通用户的登录令牌
+ * 也走 Bearer，混进来会把「用户删自己的留言」误记成一次口令错误，五次之后把
+ * 正常人锁在门外。
+ *
+ * 没带 Authorization 的请求只回 401、不计数 —— 否则任何一个陌生人点一下这个地址，
+ * 就能把站主自己的 IP 关十分钟。
+ */
+async function adminGate(
+  request: Request,
+  env: Env,
+  cors: Record<string, string>,
+): Promise<Response | null> {
+  if (!env.ADMIN_TOKEN) return null
+
+  const digest = await ipDigest(clientIp(request), env)
+  const now = Date.now()
+
+  const fails = await env.DB.prepare(
+    'SELECT COUNT(*) AS n FROM admin_failures WHERE ip_hash = ? AND at > ?',
+  )
+    .bind(digest, now - ADMIN_WINDOW)
+    .first<{ n: number }>()
+
+  if ((fails?.n ?? 0) >= ADMIN_MAX_FAILS) {
+    return json({ error: '试的次数太多了，十分钟后再来' }, 429, cors)
+  }
+
+  const header = request.headers.get('Authorization') ?? ''
+  if (!header.startsWith('Bearer ')) return json({ error: '口令不对' }, 401, cors)
+
+  if (safeEqual(header.slice(7), env.ADMIN_TOKEN)) {
+    await env.DB.prepare('DELETE FROM admin_failures WHERE ip_hash = ?').bind(digest).run()
+    return null
+  }
+
+  await env.DB.prepare('INSERT INTO admin_failures (ip_hash, at) VALUES (?, ?)')
+    .bind(digest, now)
+    .run()
+  // 顺手清掉过窗的：这张表只该有最近十分钟的失败，不该越积越多
+  await env.DB.prepare('DELETE FROM admin_failures WHERE at < ?')
+    .bind(now - ADMIN_WINDOW)
+    .run()
+
+  return json({ error: '口令不对' }, 401, cors)
+}
+
+/**
  * 分页游标：`<created_at>_<id>`。
  *
  * 只用时间戳当下界会漏条 —— 同一个毫秒写进来的两条，第二条的 created_at 相等，
@@ -218,11 +316,60 @@ async function hmac(data: string, secret: string): Promise<string> {
  * 正常的留言变味。真要防注入，该防的是渲染端，不是存储端。
  */
 function clean(input: unknown, max: number): string {
-  return String(input ?? '')
+  const text = String(input ?? '')
     .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
     .replace(/\r\n?/g, '\n')
     .trim()
-    .slice(0, max)
+  return clamp(text, max)
+}
+
+/**
+ * 按码点截断。
+ *
+ * `slice(0, max)` 数的是 UTF-16 码元，正好切在 emoji 中间时会留下一个孤立的
+ * 高代理项 —— JSON.stringify 把它写成 `\ud83d`，存进 D1 再读出来就是乱码或替换符，
+ * 而且用户只会看到「我最后那个表情没了」。这里整字符地吐，切不下就停。
+ */
+function clamp(text: string, max: number): string {
+  if (text.length <= max) return text
+  let out = ''
+  for (const char of text) {
+    if (out.length + char.length > max) break
+    out += char
+  }
+  return out
+}
+
+type Payload = Record<string, unknown>
+
+/**
+ * 读 JSON 请求体，带体积闸。
+ *
+ * Content-Length 是客户端说的，可以撒谎也可以根本没有（chunked），所以真正的
+ * 上限要落在读完之后的长度上；先看头部只是为了让明显超标的包连读都不用读。
+ */
+async function readJsonBody(
+  request: Request,
+  cors: Record<string, string>,
+): Promise<Payload | Response> {
+  const declared = Number(request.headers.get('content-length') ?? '0')
+  if (Number.isFinite(declared) && declared > MAX_JSON_BYTES) {
+    return json({ error: '内容太长了' }, 413, cors)
+  }
+
+  const text = await request.text().catch(() => null)
+  if (text === null) return json({ error: '请求没读完' }, 400, cors)
+  if (text.length > MAX_JSON_BYTES) return json({ error: '内容太长了' }, 413, cors)
+
+  try {
+    const parsed: unknown = JSON.parse(text)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return json({ error: '请求格式不对' }, 400, cors)
+    }
+    return parsed as Payload
+  } catch {
+    return json({ error: '请求格式不对' }, 400, cors)
+  }
 }
 
 function clientIp(request: Request): string {
@@ -240,7 +387,8 @@ async function readAuth(request: Request, env: Env): Promise<AuthUser | null> {
   if (dot < 1) return null
 
   const payload = token.slice(0, dot)
-  if ((await hmac(payload, env.AUTH_SECRET)) !== token.slice(dot + 1)) return null
+  // 签名比较也走定长：`!==` 在第一个不同字节就返回，能把签名逐字节试出来
+  if (!safeEqual(await hmac(payload, env.AUTH_SECRET), token.slice(dot + 1))) return null
 
   try {
     const data = JSON.parse(unb64url(payload)) as AuthUser & { exp: number }
@@ -340,8 +488,8 @@ async function createComment(
   cors: Record<string, string>,
 ): Promise<Response> {
   const ip = clientIp(request)
-  const payload = (await request.json().catch(() => null)) as Record<string, unknown> | null
-  if (!payload) return json({ error: '请求格式不对' }, 400, cors)
+  const payload = await readJsonBody(request, cors)
+  if (payload instanceof Response) return payload
 
   const scope = payload.scope === 'guest' ? 'guest' : 'post'
   const thread = String(payload.thread ?? '').trim()
@@ -581,13 +729,15 @@ async function authStart(request: Request, env: Env, cors: Record<string, string
 }
 
 async function authCallback(url: URL, env: Env): Promise<Response> {
-  if (!authReady(env)) return new Response('没有配置 GitHub 登录', { status: 501 })
+  if (!authReady(env)) return plain('没有配置 GitHub 登录', 501)
 
   const code = url.searchParams.get('code')
   const [stamp, signature] = (url.searchParams.get('state') ?? '').split('.')
-  if (!code || !stamp || !signature) return new Response('参数不全', { status: 400 })
-  if ((await hmac(stamp, env.AUTH_SECRET ?? '')) !== signature) return new Response('state 不匹配', { status: 400 })
-  if (Date.now() - Number(stamp) > 600_000) return new Response('登录过期了，请重试', { status: 400 })
+  if (!code || !stamp || !signature) return plain('参数不全', 400)
+  if (!safeEqual(await hmac(stamp, env.AUTH_SECRET ?? ''), signature)) {
+    return plain('state 不匹配', 400)
+  }
+  if (Date.now() - Number(stamp) > 600_000) return plain('登录过期了，请重试', 400)
 
   const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
@@ -599,7 +749,7 @@ async function authCallback(url: URL, env: Env): Promise<Response> {
     }),
   })
   const tokenData = (await tokenRes.json().catch(() => ({}))) as { access_token?: string }
-  if (!tokenData.access_token) return new Response('换取令牌失败', { status: 502 })
+  if (!tokenData.access_token) return plain('换取令牌失败', 502)
 
   const meRes = await fetch('https://api.github.com/user', {
     headers: {
@@ -609,7 +759,7 @@ async function authCallback(url: URL, env: Env): Promise<Response> {
     },
   })
   const me = (await meRes.json().catch(() => ({}))) as { login?: string; html_url?: string }
-  if (!me.login) return new Response('读取 GitHub 账号失败', { status: 502 })
+  if (!me.login) return plain('读取 GitHub 账号失败', 502)
 
   const payload = b64url(
     JSON.stringify({
@@ -634,11 +784,17 @@ export default {
     const url = new URL(request.url)
     const cors = corsHeaders(request, env)
 
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...SECURITY_HEADERS, ...cors } })
 
     const path = url.pathname.replace(/\/+$/, '') || '/'
 
     try {
+      // 管理接口统一先过爆破闸，再过各路由自己的 isAdmin 判断
+      if (path.startsWith('/api/admin/')) {
+        const denied = await adminGate(request, env, cors)
+        if (denied) return denied
+      }
+
       if (path === '/' || path === '/health') {
         return json({ ok: true, service: 'site-comments' }, 200, cors)
       }
@@ -656,9 +812,7 @@ export default {
 
       if (path === '/api/comments' && request.method === 'GET') {
         return await listComments(request, url, env, cors)
-      }
-
-      if (path === '/api/comments' && request.method === 'POST') {
+      }      if (path === '/api/comments' && request.method === 'POST') {
         return await createComment(request, env, cors)
       }
 

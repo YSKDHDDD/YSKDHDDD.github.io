@@ -167,6 +167,67 @@ function normalizeBase(raw: string | undefined) {
   return trimmed ? `/${trimmed}/` : '/'
 }
 
+/**
+ * 安全 meta：CSP + referrer。
+ *
+ * GitHub Pages 不支持自定义响应头（`public/_headers` 在这边是死文件），
+ * 所以能用的只有 `<meta http-equiv>`。代价是三条指令在 meta 里无效：
+ * frame-ancestors / report-uri / sandbox —— 也就是说**防不了点击劫持**，
+ * 那条只能等以后挂 CDN 或换托管时用响应头补。
+ *
+ * script-src 敢写成 'self'，是因为内联脚本只有一段「首帧定主题」，已经抽成
+ * public/theme-init.js。剩下的内联 script 是 JSON-LD（type="application/ld+json"），
+ * 它不执行，CSP 也不会拦。
+ *
+ * style-src 必须带 'unsafe-inline'：React 的 style={{}} 和 Shiki 的行内高亮都是
+ * style 属性，CSP 对属性的收紧（style-src-attr）会把它们全判违规。这是这类站点的
+ * 常态妥协 —— 样式注入的危害远小于脚本注入，真正的边界仍在 script-src。
+ *
+ * 不在 dev 注入：HMR 要连 ws、要内联脚本、要 eval，套上 CSP 直接不能工作。
+ * 也就是说这份策略的验证只能靠 `vite preview` 或线上，改完必须实测。
+ */
+function securityMeta(apiOrigin: string | null): Plugin {
+  const connectSrc = ["'self'", ...(apiOrigin ? [apiOrigin] : [])].join(' ')
+
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "media-src 'self'",
+    `connect-src ${connectSrc}`,
+    "frame-src 'none'",
+    "worker-src 'none'",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ')
+
+  return {
+    name: 'security-meta',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        const slot = '<!--security-meta-->'
+        if (!html.includes(slot)) {
+          // 占位符没了还继续构建，只会安静地失去这一层防护 —— 宁可构建失败
+          throw new Error('index.html 里找不到 <!--security-meta--> 占位，CSP 无法注入')
+        }
+        return html.replace(
+          slot,
+          [
+            `<meta http-equiv="Content-Security-Policy" content="${csp}" />`,
+            '<meta name="referrer" content="strict-origin-when-cross-origin" />',
+          ].join('\n    '),
+        )
+      },
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   /**
    * 站点不一定在域名根路径下：GitHub Pages 的项目站点是
@@ -183,6 +244,23 @@ export default defineConfig(({ mode }) => {
    */
   const env = loadEnv(mode, process.cwd(), 'VITE_')
   const base = normalizeBase(env.VITE_BASE)
+
+  /**
+   * 留言 API 的源，用来拼 connect-src。
+   *
+   * 只取 origin 不取完整路径：CSP 的 connect-src 按源匹配，写全路径没有额外收益，
+   * 反而在以后换接口前缀时要跟着改。解析失败就当没配 —— 宁可比实际少放行一点，
+   * 也不能因为一个非法地址让整条 CSP 变成空字符串（那会放行所有源）。
+   */
+  const apiUrl = (env.VITE_COMMENTS_API ?? '').trim()
+  let apiOrigin: string | null = null
+  if (apiUrl) {
+    try {
+      apiOrigin = new URL(apiUrl).origin
+    } catch {
+      console.warn(`VITE_COMMENTS_API 不是合法地址，connect-src 只放行同源：${apiUrl}`)
+    }
+  }
 
   /**
    * 预渲染时把「懒加载实现」换成「同步实现」。
@@ -222,6 +300,7 @@ export default defineConfig(({ mode }) => {
       __BUILD_TIME__: JSON.stringify(Date.now()),
     },
     plugins: [
+      securityMeta(apiOrigin),
       contentIndex(),
       mdx({
         remarkPlugins: [remarkFrontmatter, remarkGfm],

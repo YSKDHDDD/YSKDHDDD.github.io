@@ -2,6 +2,12 @@
 <html lang="zh-CN" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
+    <!-- 安全 meta（CSP / referrer）由 vite.config.ts 的 securityMeta 插件在这里展开，
+         只在 build 时注入：dev server 的 HMR 要连 ws、要内联脚本，套上 CSP 会直接不工作。
+         位置必须在页面标题之前：预渲染会用 headFor 的整体输出替换标题 + 描述那一段，
+         那一段里带 og / JSON-LD / canonical，放到它后面的话 CSP 只能管到半个 head。
+         注意这条注释里不要写尖括号形式的 title 标签 —— 预渲染的正则会从那里开始匹配。 -->
+    <!--security-meta-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>学习外脑 · 技术笔记与项目复盘</title>
     <meta
@@ -11,21 +17,8 @@
     <meta name="color-scheme" content="dark light" />
     <!-- %BASE_URL% 由 Vite 按 base 替换：部署在子路径时 favicon 才不会 404 -->
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
-    <!-- 在首屏绘制前定好主题，避免深浅色闪烁 -->
-    <script>
-      ;(() => {
-        try {
-          const stored = localStorage.getItem('theme')
-          const system = window.matchMedia('(prefers-color-scheme: light)').matches
-            ? 'light'
-            : 'dark'
-          document.documentElement.dataset.theme =
-            stored === 'light' || stored === 'dark' ? stored : system
-        } catch {
-          /* localStorage 不可用时退回默认深色 */
-        }
-      })()
-    </script>
+    <!-- 在首屏绘制前定好主题，避免深浅色闪烁。外置而不是内联，是为了 CSP 能不开 'unsafe-inline' -->
+    <script src="%BASE_URL%theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

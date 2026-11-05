@@ -1578,3 +1578,70 @@ CDP 驱动真实 Edge，干净 profile：首次进 `/life` 六张卡片、六张
 「自己的记录」再进页面 → 七条（那条在前 + 六条示例），`withBlob` 恰为 6，刷新仍七条、库内仍七条。
 桌面 1440 与移动 390 截图核对无溢出。
 
+## 32. 安全加固：能收紧的收紧，收不紧的写清楚（2026-11-05）
+
+### 32.1 前端只剩 meta 可用
+
+GitHub Pages 不支持自定义响应头，`public/_headers` 在那边是死文件。所以 CSP 只能走
+`<meta http-equiv>`，而 meta 里有三条指令**永远无效**：`frame-ancestors`、`report-uri`、`sandbox`。
+于是点击劫持这一条明确留在「做不到」的表里，而不是写一个看起来做了、其实被浏览器忽略的指令。
+
+### 32.2 为了让 `script-src 'self'` 成立，把首帧脚本搬出去
+
+内联脚本要被 CSP 放行只有三条路：`'unsafe-inline'`（等于放弃这层）、`sha256`（必须保证
+构建产物与 hash 严格一致，Vite 对 HTML 的任何一次微调都会让它失效且**无声**）、
+nonce（静态站给不出每次不同的值）。
+
+选了第四条：搬成 `public/theme-init.js`，普通脚本而不是 module —— module 默认 defer，
+会等文档解析完才跑，那时第一帧已经用错主题画出来了，也就是闪烁。代价是多一次请求，
+几百字节、同步阻塞在 `<body>` 之前，行为和内联完全一致。
+
+`style-src` 仍然必须带 `'unsafe-inline'`：React 的 `style={{}}` 与 Shiki 的行内高亮都是
+style 属性。这是这类站点的常态妥协 —— 样式注入的危害远小于脚本注入，真正的边界在 `script-src`。
+
+### 32.3 一个把自己坑了的细节
+
+CSP 的占位符最初放在 `color-scheme` 后面（原内联脚本的位置）。而 `scripts/prerender.mjs` 的
+`HEAD_RE` 是从 `<title>` 开始匹配的 —— 我在旁边那条注释里写了尖括号形式的 title 字样，
+于是替换从注释中间开始，**CSP meta 整段被吞掉，构建却照样成功**。
+
+发现方式很朴素：构建完 `sed -n '1,12p' dist/index.html` 看了一眼，发现 CSP 不在。
+现在占位符紧跟 `<meta charset>`，注释里也不再出现任何会被下游正则匹配的标签字面量，
+并在插件里加了一句「找不到占位符就 throw」—— 宁可构建失败，也不要安静地少一层防护。
+
+### 32.4 Worker 三处
+
+- **请求体 16KB**：先看 `Content-Length` 挡掉明显超标的，读完再量一次实际长度。
+  头部是客户端说的，可以撒谎，也可以干脆没有（chunked）。不设上限时 `request.json()`
+  会先把整个包读进内存再被 `clean` 截断 —— 读之前那一瞬间是完整的。
+- **管理口令的爆破闸**：十分钟内错五次就锁这个 IP，成功一次清零。计数落在 D1 的
+  `admin_failures` 表而不是内存 —— Worker 的 isolate 随时回收，进程内计数等于没有。
+  只挡 `/api/admin/*`：`DELETE /api/comments/:id` 上普通用户的登录令牌也走 Bearer，
+  混进来会把「用户删自己的留言」误记成口令错误，五次之后把正常人锁在门外。
+  没带 `Authorization` 的请求只回 401、不计数，否则陌生人点一下就能关掉站主自己的 IP。
+- **统一安全头**：`json()` 和 `plain()` 都带 nosniff / no-referrer / X-Frame-Options / CSP；
+  连 204 预检也补上了。
+
+顺带把三处签名比较从 `!==` 换成 `safeEqual`。定长比较不只是给管理口令用的 —— 登录令牌
+（`payload.signature`）和 OAuth 的 `state` 同样是「猜对一位就多一分」的东西。
+
+### 32.5 验证
+
+- 构建产物：`dist/index.html` 第 6 行就是 CSP；三份抽查的 HTML 里唯一的内联 script 是
+  `application/ld+json`（不执行，CSP 也不拦）。
+- `vite preview` + CDP 跑 8 个路由（`/`、`/notes/`、一篇笔记、`/life/`、`/craft/`、`/me/`、
+  `/about/`、`/import/`）：CSP 违规 0、console error 0；`/life/` 的 12 张图全是 `blob:` 且无一破图。
+- 负向探测（证明策略真的在生效，而不只是写在文档里）：动态插入内联脚本 → 拦；
+  `javascript:` 链接 → 拦；`cdn.jsdelivr.net` 的外部脚本 → 拦；同源 `theme-init.js` → 放行。
+- 主题脚本执行：把 `localStorage.theme` 写成 `light` 再刷新，`dataset.theme` 变 light。
+- Worker 用 `dev-node.mjs` 跑真 SQL：20000 字节的包 → 413；错口令 5 次后第 6 次 429，
+  此时改用正确口令仍然 429（锁定期间不给信号）；换一个 IP 用正确口令 → 200。
+
+### 32.6 没做的
+
+**备份没有塞进 CI。** D1 的 Time Travel 与 `wrangler d1 export` 两条命令写进了
+`worker/README.md`，但自动化需要把 Cloudflare API Token 放进 GitHub Secrets ——
+为了一个一年几十行的表，多养一份长期凭据，风险不划算。
+
+也没有加 Turnstile：不是「忘了」，是 `challenges.cloudflare.com` 在国内经常连不上，
+配了它而脚本加载不出来，整个留言区就废了。这条判断在 §15 就写过，这里没有推翻。
